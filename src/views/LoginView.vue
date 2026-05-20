@@ -3,12 +3,10 @@
 <template>
   
   <div class="master-layout">
-    <!-- Fundo Dinâmico com Gradiente Suave -->
     <div class="animated-background"></div>
 
     <div class="premium-card">
       
-      <!-- LADO ESQUERDO: Painel Imersivo (Banner) -->
       <div class="immersive-panel">
         <img src="../assets/Banner.png" alt="Visual Didascalias" class="cinematic-bg" />
         <div class="glass-overlay">
@@ -20,11 +18,9 @@
         </div>
       </div>
 
-      <!-- LADO DIREITO: Área de Autenticação (Branca) -->
       <div class="auth-panel">
         <div class="auth-wrapper">
           
-          <!-- Logo e Boas-vindas -->
           <div class="auth-header stagger-in-2">
             <div class="logo-showcase">
               <img src="../assets/Didas_Logo.png" alt="Didascalias Logo" class="main-logo" />
@@ -34,10 +30,8 @@
             <p>Introduza as suas credenciais para acessar o sistema.</p>
           </div>
 
-          <!-- Formulário -->
           <form @submit.prevent="handleLogin" class="auth-form">
             
-            <!-- Campo E-mail -->
             <div class="input-group stagger-in-3">
               <label for="email">E-mail</label>
               <div class="input-box">
@@ -48,7 +42,6 @@
               </div>
             </div>
 
-            <!-- Campo Palavra-passe -->
             <div class="input-group stagger-in-4">
               <div class="label-row">
                 <label for="password">Palavra-passe</label>
@@ -74,21 +67,29 @@
               </label>
             </div>
 
-            <!-- Botão Inovador -->
             <div class="btn-container stagger-in-6">
               <button type="submit" class="btn-glow">
                 <span>Acessar</span>
                 <div class="light-sweep"></div>
               </button>
             </div>
-
           </form>
 
-          <!-- Secção de Parceiros (Novidade) -->
+          <div class="register-wrapper stagger-in-6" style="margin-top: 1.5rem;">
+            <div style="display: flex; align-items: center; text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">
+              <div style="flex: 1; border-top: 1px solid #e2e8f0;"></div>
+              <span style="padding: 0 10px;">Novo por aqui?</span>
+              <div style="flex: 1; border-top: 1px solid #e2e8f0;"></div>
+            </div>
+            
+            <button type="button" class="register-button" @click="goToCadastro" style="width: 100%; margin-bottom: 0;">
+              Criar uma conta
+            </button>
+          </div>
+
           <div class="partners-section stagger-in-7">
             <p class="partners-title">Parceiros do Didascalias</p>
             <div class="partners-grid">
-              <!-- Substitua os SRCs pelos nomes reais dos seus ficheiros -->
               <div class="partner-logo-wrapper"><img src="../assets/Affect.png" alt="Affect" class="partner-img" onerror="this.style.opacity='0'; this.parentElement.classList.add('fallback-box');" /></div>
               <div class="partner-logo-wrapper"><img src="../assets/Agora.png" alt="Agora" class="partner-img" onerror="this.style.opacity='0'; this.parentElement.classList.add('fallback-box');" /></div>
               <div class="partner-logo-wrapper"><img src="../assets/UAB.png" alt="UAB" class="partner-img" onerror="this.style.opacity='0'; this.parentElement.classList.add('fallback-box');" /></div>
@@ -105,13 +106,20 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 
+const router = useRouter()
+
 const handleLogin = () => {
   console.log('A autenticar:', email.value)
   // Lógica de Login Aqui
+}
+
+const goToCadastro = () => {
+  router.push('/cadastro')
 }
 </script>
