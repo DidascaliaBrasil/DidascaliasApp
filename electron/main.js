@@ -1,10 +1,15 @@
 import { BrowserWindow, app } from "electron";
 import path from "node:path";
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 //#region electron/main.js
 function createWindow() {
 	const win = new BrowserWindow({
 		width: 1024,
 		height: 768,
+		icon: path.join(__dirname, "../public/icon.png"),
 		webPreferences: {
 			nodeIntegration: true,
 			contextIsolation: false
