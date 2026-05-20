@@ -9,7 +9,7 @@
 }
 
 :root {
-  --primary: #0066FF; /* Azul Absoluto e Visível */
+  --primary: #0066FF; 
   --primary-hover: #0052cc;
   --bg-color: #eef2f6;
   --text-dark: #0f172a;
@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem; /* Reduzido para mobile */
+  padding: 1rem;
   background-color: var(--bg-color);
   position: relative;
   overflow: hidden;
@@ -58,26 +58,26 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* min-height removido para evitar scroll vertical em ecrãs de computador */
+  max-height: 95vh; /* Evita que o card ultrapasse o ecrã verticalmente */
 }
 
 @media (min-width: 1024px) {
   .premium-card { 
-    flex-direction: row; 
+    flex-direction: row; /* Mantém a direção em linha para ecrãs grandes */
     border-radius: 28px;
   }
 }
 
-/* --- LADO ESQUERDO (Banner e Tipografia de Impacto) --- */
+/* --- LADO DIREITO (Banner - Anteriormente Lado Esquerdo) --- */
 .immersive-panel {
-  display: none; /* Ocultar em mobile para evitar scroll excessivo e focar no login */
+  display: none; 
 }
 
 @media (min-width: 1024px) {
   .immersive-panel {
     display: block;
     position: relative;
-    width: 45%;
+    width: 40%; /* Ligeiramente menor para dar espaço ao formulário */
     background-color: #0f172a;
     overflow: hidden;
   }
@@ -136,26 +136,33 @@
   max-width: 90%;
 }
 
-/* --- LADO DIREITO (Parte Branca / Formulário) --- */
+/* --- LADO ESQUERDO (Formulário com Scroll Interno - Anteriormente Lado Direito) --- */
 .auth-panel {
   width: 100%;
   padding: 2.5rem 1.5rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Alinhado ao topo para permitir scroll fluído */
   justify-content: center;
   background: #ffffff;
+  overflow-y: auto; /* Permite scroll apenas dentro do painel do formulário */
 }
+
+/* Custom Scrollbar para o painel */
+.auth-panel::-webkit-scrollbar { width: 6px; }
+.auth-panel::-webkit-scrollbar-track { background: transparent; }
+.auth-panel::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
 
 @media (min-width: 1024px) {
   .auth-panel { 
-    width: 55%; 
-    padding: 3rem 4rem; /* Padding mais equilibrado */
+    width: 60%; 
+    padding: 3rem 3rem; 
   }
 }
 
 .auth-wrapper {
   width: 100%;
-  max-width: 440px;
+  max-width: 550px; /* Mais largo para acomodar as 2 colunas */
+  margin: auto;
 }
 
 /* Logo Showcase */
@@ -163,29 +170,20 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  margin-bottom: 1.5rem; /* Reduzido de 2rem */
+  margin-bottom: 1.5rem;
 }
 
 .main-logo {
-  height: 48px; /* Tamanho ligeiramente mais compacto */
+  height: 40px; 
   object-fit: contain;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
-  animation: logoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   margin-right: 12px; 
 }
 
 .brand-name {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: var(--text-dark);
   letter-spacing: -0.5px;
-  animation: logoPop 0.8s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  opacity: 0;
-}
-
-@keyframes logoPop {
-  0% { transform: scale(0.8); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
 }
 
 .auth-header h2 {
@@ -199,38 +197,67 @@
 .auth-header p {
   color: var(--text-gray);
   font-size: 0.95rem;
-  margin-bottom: 1.5rem; /* Reduzido de 2.5rem */
+  margin-bottom: 1.5rem; 
 }
 
-/* Inputs Premium */
+/* --- SWITCH BUTTON (Facilitador / Professor) --- */
+.role-selector {
+  display: flex;
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  padding: 5px;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.role-option {
+  flex: 1;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-gray);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.role-option.active {
+  background-color: #ffffff;
+  color: var(--primary);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* --- GRID DO FORMULÁRIO (2 Colunas) --- */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem; /* Espaço apenas entre colunas */
+}
+
+.col-span-2 {
+  grid-column: span 2;
+}
+
+/* Ajuste para mobile: Volta a ser 1 coluna */
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .col-span-2 { grid-column: span 1; }
+}
+
+/* Inputs Premium Destacados */
 .input-group {
-  margin-bottom: 1.25rem; /* Reduzido de 1.5rem */
+  margin-bottom: 1rem;
 }
 
-.input-group label, .label-row label {
+.input-group label {
   display: block;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700; /* Mais forte para destacar o label */
   color: var(--text-dark);
   margin-bottom: 0.4rem;
 }
-
-.label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.4rem;
-}
-
-.link-forgot {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-decoration: none;
-  color: var(--primary);
-  transition: opacity 0.2s;
-}
-
-.link-forgot:hover { opacity: 0.7; }
 
 .input-box {
   position: relative;
@@ -241,28 +268,30 @@
 .input-box i {
   position: absolute;
   left: 1rem;
-  color: #94a3b8;
+  color: #64748b; /* Ícones mais escuros por padrão */
   width: 18px;
   height: 18px;
   transition: color 0.3s;
+  z-index: 2;
 }
 
 .input-box input {
   width: 100%;
-  padding: 0.85rem 1rem 0.85rem 2.8rem; /* Padding vertical reduzido */
-  background: #f8fafc;
-  border: 2px solid transparent;
+  padding: 0.85rem 1rem 0.85rem 2.8rem;
+  background: #ffffff; /* Fundo branco puro para destaque */
+  border: 2px solid #cbd5e1; /* Borda visível por padrão */
   border-radius: 12px;
   font-size: 0.95rem;
   color: var(--text-dark);
   outline: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02); /* Sombra interna sútil */
   transition: all 0.3s ease;
 }
 
 .input-box input:focus {
   background: #ffffff;
   border-color: var(--primary);
-  box-shadow: 0 4px 15px rgba(0, 102, 255, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.15); /* Brilho de foco mais intenso e moderno */
 }
 
 .input-box input:focus + i, .input-box:focus-within i {
@@ -274,54 +303,20 @@
   right: 1rem;
   background: none;
   border: none;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   padding: 0;
   display: flex;
   transition: color 0.2s;
+  z-index: 2;
 }
 .btn-eye:hover { color: var(--primary); }
 .btn-eye svg { width: 18px; height: 18px; }
 
-/* Checkbox Moderno */
-.checkbox-group {
-  margin-bottom: 1.5rem; /* Reduzido de 2rem */
-}
-.cyber-checkbox {
-  display: flex;
-  align-items: center;
-  font-size: 0.9rem;
-  color: var(--text-dark);
-  font-weight: 500;
-  cursor: pointer;
-  position: relative;
-  user-select: none;
-}
-.cyber-checkbox input { display: none; }
-.cyber-checkbox .box {
-  width: 20px; height: 20px;
-  border: 2px solid #cbd5e1;
-  border-radius: 6px;
-  margin-right: 10px;
-  display: flex; justify-content: center; align-items: center;
-  transition: all 0.2s ease;
-}
-.cyber-checkbox input:checked + .box {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-.cyber-checkbox input:checked + .box::after {
-  content: '';
-  width: 5px; height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  margin-bottom: 2px;
-}
-
 /* BOTÃO DE ALTA CONVERSÃO */
 .btn-container {
-  margin-bottom: 1.5rem; /* Reduzido de 2.5rem */
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem; 
 }
 
 .btn-glow {
@@ -371,9 +366,9 @@
   transform: translateY(0);
 }
 
-/* Área de Registo */
+/* Área de Voltar para Login */
 .register-wrapper {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .register-divider {
@@ -398,8 +393,8 @@
   width: 100%;
   padding: 0.75rem;
   background-color: transparent;
-  color: #4f46e5;
-  border: 1.5px solid #4f46e5;
+  color: var(--text-gray);
+  border: 1.5px solid #cbd5e1;
   border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 600;
@@ -408,94 +403,20 @@
 }
 
 .register-button:hover {
-  background-color: #f5f3ff;
+  background-color: #f8fafc;
+  color: var(--text-dark);
+  border-color: #94a3b8;
 }
 
-/* --- SECÇÃO DAS EMPRESAS PARCEIRAS --- */
-.partners-section {
-  border-top: 1px solid var(--border-color);
-  padding-top: 1.5rem;
-  text-align: center;
-}
-
-.partners-title {
-  font-size: 0.75rem;
-  color: var(--text-gray);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 1rem;
-}
-
-.partners-grid {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.partner-logo-wrapper {
-  flex: 1;
-  height: 35px; /* Reduzido de 45px */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.partner-img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  filter: grayscale(100%) opacity(60%);
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.partner-img:hover {
-  filter: grayscale(0%) opacity(100%);
-  transform: scale(1.05);
-}
-
-.fallback-box {
-  background: #f1f5f9;
-  border-radius: 8px;
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-.fallback-box::after {
-  content: 'Logo';
-  color: #cbd5e1;
-  font-size: 0.7rem;
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-/* --- ANIMAÇÕES DE ENTRADA EM CASCATA --- */
-.stagger-in-1 { animation: fadeUp 0.8s 0.1s both; }
-.stagger-in-2 { animation: fadeUp 0.8s 0.2s both; }
-.stagger-in-3 { animation: fadeUp 0.8s 0.3s both; }
-.stagger-in-4 { animation: fadeUp 0.8s 0.4s both; }
-.stagger-in-5 { animation: fadeUp 0.8s 0.5s both; }
-.stagger-in-6 { animation: fadeUp 0.8s 0.6s both; }
-.stagger-in-7 { animation: fadeUp 0.8s 0.7s both; }
+/* --- ANIMAÇÕES --- */
+.stagger-in-1 { animation: fadeUp 0.6s 0.1s both; }
+.stagger-in-2 { animation: fadeUp 0.6s 0.15s both; }
+.stagger-in-3 { animation: fadeUp 0.6s 0.2s both; }
+.stagger-in-4 { animation: fadeUp 0.6s 0.25s both; }
+.stagger-in-5 { animation: fadeUp 0.6s 0.3s both; }
+.stagger-in-6 { animation: fadeUp 0.6s 0.35s both; }
 
 @keyframes fadeUp {
-  0% { opacity: 0; transform: translateY(15px); } /* Distância reduzida */
+  0% { opacity: 0; transform: translateY(15px); }
   100% { opacity: 1; transform: translateY(0); }
-}
-
-/* Responsividade de Parceiros */
-@media (max-width: 480px) {
-  .partners-grid {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-  .partner-logo-wrapper {
-    flex: 0 0 45%; 
-    height: 30px;
-    margin-bottom: 0.5rem;
-  }
 }

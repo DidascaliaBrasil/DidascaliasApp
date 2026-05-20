@@ -7,8 +7,9 @@
 
     <div class="premium-card">
       
+      <!-- Painel Esquerdo (Oculto em Mobile para melhor experiência) -->
       <div class="immersive-panel">
-        <img src="../assets/Banner.png" alt="Visual Didascalias" class="cinematic-bg" />
+        <img src="../assets/Banner1.png" alt="Visual Didascalias" class="cinematic-bg" />
         <div class="glass-overlay">
           <div class="immersive-content stagger-in-1">
             <div class="badge">Inovação</div>
@@ -18,6 +19,7 @@
         </div>
       </div>
 
+      <!-- Painel Direito (Formulário) -->
       <div class="auth-panel">
         <div class="auth-wrapper">
           
@@ -75,14 +77,14 @@
             </div>
           </form>
 
-          <div class="register-wrapper stagger-in-6" style="margin-top: 1.5rem;">
-            <div style="display: flex; align-items: center; text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">
-              <div style="flex: 1; border-top: 1px solid #e2e8f0;"></div>
-              <span style="padding: 0 10px;">Novo por aqui?</span>
-              <div style="flex: 1; border-top: 1px solid #e2e8f0;"></div>
+          <div class="register-wrapper stagger-in-6">
+            <div class="register-divider">
+              <div class="line"></div>
+              <span>Novo por aqui?</span>
+              <div class="line"></div>
             </div>
             
-            <button type="button" class="register-button" @click="goToCadastro" style="width: 100%; margin-bottom: 0;">
+            <button type="button" class="register-button" @click="goToCadastro">
               Criar uma conta
             </button>
           </div>
