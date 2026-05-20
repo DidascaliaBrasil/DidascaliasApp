@@ -1,0 +1,449 @@
+/* --- FONTES & RESET --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+}
+
+:root {
+  --primary: #0066FF; /* Azul Absoluto e Visível */
+  --primary-hover: #0052cc;
+  --bg-color: #eef2f6;
+  --text-dark: #0f172a;
+  --text-gray: #64748b;
+  --border-color: #e2e8f0;
+}
+
+/* --- LAYOUT PRINCIPAL --- */
+.master-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: var(--bg-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.animated-background {
+  position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(circle at center, #dbeafe 0%, transparent 50%),
+              radial-gradient(circle at bottom right, #bfdbfe 0%, transparent 40%);
+  animation: bg-shift 20s infinite linear;
+  z-index: 0;
+}
+
+@keyframes bg-shift {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.premium-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1200px;
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 700px;
+}
+
+@media (min-width: 1024px) {
+  .premium-card { flex-direction: row; }
+}
+
+/* --- LADO ESQUERDO (Banner e Tipografia de Impacto) --- */
+.immersive-panel {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+  background-color: #0f172a;
+}
+
+@media (min-width: 1024px) {
+  .immersive-panel { width: 45%; height: auto; }
+}
+
+.cinematic-bg {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  animation: cinematicZoom 25s ease-in-out infinite alternate;
+  opacity: 0.8;
+}
+
+@keyframes cinematicZoom {
+  0% { transform: scale(1.0); }
+  100% { transform: scale(1.15); }
+}
+
+.glass-overlay {
+  position: absolute;
+  inset: 0;
+  /* Máscara de 3 tonalidades: Azul escuro, Azul claro e Verde */
+  background: linear-gradient(135deg, rgba(15,23,42,0.85) 0%, rgba(59,130,246,0.6) 50%, rgba(16,185,129,0.5) 100%);
+  display: flex;
+  align-items: flex-end;
+  padding: 4rem 3rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.hero-text {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  letter-spacing: -1px;
+}
+
+.hero-subtext {
+  font-size: 1.1rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  max-width: 90%;
+}
+
+/* --- LADO DIREITO (Parte Branca / Formulário) --- */
+.auth-panel {
+  width: 100%;
+  padding: 3rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+}
+
+@media (min-width: 1024px) {
+  .auth-panel { width: 55%; padding: 4rem; }
+}
+
+.auth-wrapper {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* Logo Showcase */
+.logo-showcase {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 2rem;
+}
+
+.main-logo {
+  height: 65px; /* Tamanho considerável na zona branca */
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+  animation: logoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  margin-right: 15px; /* Espaçamento entre o logo e o texto */
+}
+
+.brand-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+  animation: logoPop 0.8s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes logoPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.auth-header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
+}
+
+.auth-header p {
+  color: var(--text-gray);
+  font-size: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+/* Inputs Premium */
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.input-group label, .label-row label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.link-forgot {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.link-forgot:hover { opacity: 0.7; }
+
+.input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-box i {
+  position: absolute;
+  left: 1rem;
+  color: #94a3b8;
+  width: 20px;
+  height: 20px;
+  transition: color 0.3s;
+}
+
+.input-box input {
+  width: 100%;
+  padding: 1.1rem 1.1rem 1.1rem 3rem;
+  background: #f8fafc;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  font-size: 1rem;
+  color: var(--text-dark);
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.input-box input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 15px rgba(0, 102, 255, 0.1);
+}
+
+.input-box input:focus + i, .input-box:focus-within i {
+  color: var(--primary);
+}
+
+.btn-eye {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  transition: color 0.2s;
+}
+.btn-eye:hover { color: var(--primary); }
+.btn-eye svg { width: 20px; height: 20px; }
+
+/* Checkbox Moderno */
+.checkbox-group {
+  margin-bottom: 2rem;
+}
+.cyber-checkbox {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+}
+.cyber-checkbox input { display: none; }
+.cyber-checkbox .box {
+  width: 22px; height: 22px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  margin-right: 12px;
+  display: flex; justify-content: center; align-items: center;
+  transition: all 0.2s ease;
+}
+.cyber-checkbox input:checked + .box {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.cyber-checkbox input:checked + .box::after {
+  content: '';
+  width: 6px; height: 12px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+/* BOTÃO DE ALTA CONVERSÃO */
+.btn-container {
+  margin-bottom: 2.5rem;
+}
+
+.btn-glow {
+  position: relative;
+  width: 100%;
+  padding: 1.25rem;
+  background-color: #0066FF; /* Azul sólido garantido */
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 102, 255, 0.35); /* Sombra luminosa */
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-glow span {
+  position: relative;
+  z-index: 2;
+}
+
+/* Animação da onda de luz no botão */
+.light-sweep {
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform: skewX(-20deg);
+  z-index: 1;
+  animation: sweep 3s infinite;
+}
+
+@keyframes sweep {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+
+.btn-glow:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(0, 102, 255, 0.45);
+  background-color: #3988ff;
+}
+
+.btn-glow:active {
+  transform: translateY(0);
+}
+
+/* --- SECÇÃO DAS EMPRESAS PARCEIRAS --- */
+.partners-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 2rem;
+  text-align: center;
+}
+
+.partners-title {
+  font-size: 0.85rem;
+  color: var(--text-gray);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1.5rem;
+}
+
+.partners-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.partner-logo-wrapper {
+  flex: 1;
+  height: 45px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.partner-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: grayscale(100%) opacity(60%);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.partner-img:hover {
+  filter: grayscale(0%) opacity(100%);
+  transform: scale(1.05);
+}
+
+/* Fallback caso não tenha posto a imagem ainda */
+.fallback-box {
+  background: #f1f5f9;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.fallback-box::after {
+  content: 'Logo';
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* --- ANIMAÇÕES DE ENTRADA EM CASCATA --- */
+.stagger-in-1 { animation: fadeUp 0.8s 0.1s both; }
+.stagger-in-2 { animation: fadeUp 0.8s 0.2s both; }
+.stagger-in-3 { animation: fadeUp 0.8s 0.3s both; }
+.stagger-in-4 { animation: fadeUp 0.8s 0.4s both; }
+.stagger-in-5 { animation: fadeUp 0.8s 0.5s both; }
+.stagger-in-6 { animation: fadeUp 0.8s 0.6s both; }
+.stagger-in-7 { animation: fadeUp 0.8s 0.7s both; }
+
+@keyframes fadeUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsividade de Parceiros */
+@media (max-width: 480px) {
+  .partners-grid {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .partner-logo-wrapper {
+    flex: 0 0 40%; /* 2 por linha em mobile */
+    margin-bottom: 1rem;
+  }
+}
