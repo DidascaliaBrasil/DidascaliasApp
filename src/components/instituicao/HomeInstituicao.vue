@@ -11,7 +11,7 @@
 
     <div class="divider"></div>
 
-    <h3>Membros da Instituição</h3>
+    <h3 class="section-title">Membros da Instituição</h3>
     <div v-if="loadingMembros" class="sub-loading">Carregando membros...</div>
     <div v-else class="cards-grid">
       <div v-for="membro in membros" :key="membro.id" class="info-box membro-card">
@@ -19,7 +19,7 @@
         <span class="value">{{ membro.nome }}</span>
         <span class="sub-value">{{ membro.email }}</span>
       </div>
-      <p v-if="membros.length === 0">Nenhum membro vinculado encontrado.</p>
+      <p v-if="membros.length === 0" class="empty-state">Nenhum membro vinculado encontrado.</p>
     </div>
   </div>
 </template>
@@ -36,7 +36,6 @@ const props = defineProps({
 const membros = ref([])
 const loadingMembros = ref(true)
 
-// Calcula as iniciais baseadas no nome da faculdade
 const initials = computed(() => {
   const nome = props.userData.nomeFaculdade || props.userData.nomeInstituicao || 'Gestor'
   const nomes = nome.trim().split(' ')
@@ -47,7 +46,7 @@ const initials = computed(() => {
 onMounted(async () => {
   try {
     const usersRef = dbRef(database, 'usuarios')
-    const snapshot = await await get(usersRef)
+    const snapshot = await get(usersRef)
     if (snapshot.exists()) {
       const todosUsuarios = snapshot.val()
       membros.value = Object.keys(todosUsuarios)
@@ -66,31 +65,69 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* O layout do header foi movido para cá, você pode precisar ajustar classes no seu CSS global se necessário */
+.role-view { width: 100%; animation: fadeUp 0.5s ease both; }
+
 .profile-header {
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
+
 .user-avatar {
-  width: 60px;
-  height: 60px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 65px;
+  height: 65px;
+  background: linear-gradient(135deg, #0066FF, #10b981);
+  color: #ffffff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.6rem;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(0, 102, 255, 0.2);
 }
-.welcome-title { margin: 0; font-size: 1.5rem; }
-.welcome-subtitle { margin: 5px 0 0 0; color: #ccc; }
-.divider { height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
 
-.role-view { width: 100%; }
-.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-.membro-card { display: flex; flex-direction: column; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; }
-.sub-value { font-size: 0.8em; color: #ccc; margin-top: 5px; }
-.sub-loading { color: #aaa; font-style: italic; margin-top: 15px; }
+.welcome-title { margin: 0; font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+.highlight { color: #0066FF; }
+.welcome-subtitle { margin: 4px 0 0 0; color: #64748b; font-size: 0.95rem; }
+
+.divider { height: 1px; background: #e2e8f0; margin: 24px 0; }
+
+.section-title { font-size: 1.2rem; font-weight: 600; color: #0f172a; margin-bottom: 16px; }
+
+.cards-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+  gap: 20px; 
+}
+
+.membro-card { 
+  display: flex; 
+  flex-direction: column; 
+  padding: 20px; 
+  background: #ffffff; 
+  border: 1px solid #e2e8f0;
+  border-radius: 16px; 
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+}
+
+.membro-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0, 102, 255, 0.08);
+  border-color: #bfdbfe;
+}
+
+.label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #10b981; letter-spacing: 0.5px; margin-bottom: 8px; }
+.value { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+.sub-value { font-size: 0.85rem; color: #64748b; }
+
+.sub-loading { color: #64748b; font-style: italic; font-size: 0.95rem; }
+.empty-state { color: #64748b; font-size: 0.95rem; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px dashed #cbd5e1; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>
