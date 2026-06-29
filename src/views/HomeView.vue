@@ -4,7 +4,12 @@
   <div class="home-layout">
     <div class="animated-background"></div>
 
-    <MenuLateral v-if="!isLoading" :user-data="userData" />
+    <MenuLateral 
+      v-if="!isLoading" 
+      :user-data="userData" 
+      @abrir-linkar-oculos="isLinkarOculosOpen = true"
+      @abrir-gerenciar-oculos="isGerenciarOculosOpen = true"
+    />
 
     <nav class="navbar">
       <div class="logo-area stagger-in">
@@ -40,6 +45,22 @@
         </div>
       </div>
     </main>
+
+    <Transition name="slide-side">
+      <LinkarOculos 
+        v-if="isLinkarOculosOpen && tipoNormalizado === 'instituicao'" 
+        :instituicaoId="userData.id"
+        @fechar="isLinkarOculosOpen = false"
+      />
+    </Transition>
+
+    <Transition name="slide-side">
+      <GerenciarOculos 
+        v-if="isGerenciarOculosOpen && tipoNormalizado === 'instituicao'" 
+        :instituicaoId="userData.id"
+        @fechar="isGerenciarOculosOpen = false"
+      />
+    </Transition>
   </div>
 </template>
 
@@ -55,9 +76,17 @@ import HomeInstituicao from '../components/instituicao/HomeInstituicao.vue'
 import HomeFacilitador from '../components/facilitador/HomeFacilitador.vue'
 import HomeUsuario from '../components/usuario/HomeUsuario.vue'
 
+// Importações dos painéis deslizantes de gerenciamento de dispositivos VR
+import LinkarOculos from '../components/instituicao/LinkarOculos.vue'
+import GerenciarOculos from '../components/instituicao/GerenciarOculos.vue'
+
 const router = useRouter()
 const isLoading = ref(true)
 const userData = ref({})
+
+// Estados reativos para controlar a exibição dos painéis laterais de óculos
+const isLinkarOculosOpen = ref(false)
+const isGerenciarOculosOpen = ref(false)
 
 const tipoNormalizado = computed(() => {
   if (!userData.value.tipo) return 'indefinido'
@@ -129,7 +158,7 @@ onMounted(() => {
 
         if (dataEncontrada) {
           userData.value = {
-            email: user.email, // Injeta o e-mail de autenticação nos dados
+            email: user.email, 
             ...dataEncontrada,
             id: idUsado,
             tipo: tipoConta
@@ -149,3 +178,22 @@ onMounted(() => {
   })
 })
 </script>
+
+<style scoped>
+/* CSS para gerenciar a animação de entrada e saída dos painéis laterais à direita */
+.slide-side-enter-active,
+.slide-side-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.slide-side-enter-active :deep(.panel-content),
+.slide-side-leave-active :deep(.panel-content) {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-side-enter-from { opacity: 0; }
+.slide-side-leave-to { opacity: 0; }
+
+.slide-side-enter-from :deep(.panel-content) { transform: translateX(100%); }
+.slide-side-leave-to :deep(.panel-content) { transform: translateX(100%); }
+</style>

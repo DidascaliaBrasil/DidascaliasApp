@@ -1,6 +1,5 @@
 <template>
   <div>
-    <!-- Botão de ativação do menu elevado sobre a barra superior -->
     <button class="menu-trigger" @click="abrirMenu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="menu-icon">
         <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -15,7 +14,6 @@
 
     <aside :class="['menu-lateral', { 'is-open': menuAberto }]" @click="lidarCliqueMenu">
       
-      <!-- Corpo superior do menu -->
       <div class="menu-body">
         <div class="menu-header">
           <img src="../../assets/Didas_Logo.png" alt="Logo Didascalias" class="menu-logo" />
@@ -30,7 +28,9 @@
             <router-link to="/gerenciar-membros" class="menu-link" @click="fecharMenu">Gerenciar Membros</router-link>
             <router-link to="/gerenciar-grupos" class="menu-link" @click="fecharMenu">Gerenciar Grupos</router-link>
             <router-link to="/relatorios" class="menu-link" @click="fecharMenu">Relatórios Gerais</router-link>
-            <router-link to="/oculos" class="menu-link" @click="fecharMenu">Linkar Óculos</router-link>
+            
+            <button class="menu-link btn-menu" @click="abrirLinkar">Linkar Óculos</button>
+            <button class="menu-link btn-menu" @click="abrirGerenciar">Gerenciar Óculos</button>
           </template>
 
           <template v-else-if="tipoConta === 'facilitador'">
@@ -49,7 +49,6 @@
         </nav>
       </div>
 
-      <!-- Rodapé fixo do menu contendo a Conta e Ação de Sair -->
       <div class="menu-footer" @click.stop>
         <div class="account-badge">
           <div class="avatar-mini">
@@ -90,6 +89,9 @@ const props = defineProps({
   }
 })
 
+// Adicionado o evento de gerenciar óculos na emissão do componente
+const emit = defineEmits(['abrir-linkar-oculos', 'abrir-gerenciar-oculos'])
+
 const router = useRouter()
 const menuAberto = ref(false)
 
@@ -112,9 +114,19 @@ const fecharMenu = () => {
 }
 
 const lidarCliqueMenu = (event) => {
-  if (event.target.tagName !== 'A') {
+  if (event.target.tagName !== 'A' && event.target.tagName !== 'BUTTON') {
     fecharMenu()
   }
+}
+
+const abrirLinkar = () => {
+  fecharMenu()
+  emit('abrir-linkar-oculos')
+}
+
+const abrirGerenciar = () => {
+  fecharMenu()
+  emit('abrir-gerenciar-oculos') // Emite o sinal para abrir a gerência
 }
 
 const handleLogout = async () => {
@@ -174,12 +186,11 @@ const handleLogout = async () => {
   z-index: 10001;
 }
 
-/* --- CORREÇÕES APLICADAS NO MENU LATERAL --- */
 .menu-lateral {
   position: fixed;
   top: 0; 
   left: 0;
-  bottom: 0; /* Ancorado ao fundo para garantir proporção perfeita (substitui o height: 100vh) */
+  bottom: 0; 
   width: 290px;
   background: #ffffff; 
   border-right: 1px solid #e2e8f0;
@@ -189,9 +200,9 @@ const handleLogout = async () => {
   flex-direction: column;
   justify-content: space-between;
   padding: 24px;
-  padding-bottom: 32px; /* Um pouco mais de espaço no rodapé para proteção */
-  box-sizing: border-box; /* Impede o padding de aumentar o tamanho da caixa */
-  overflow-y: auto; /* Permite scroll se o conteúdo for maior que o ecrã */
+  padding-bottom: 32px; 
+  box-sizing: border-box; 
+  overflow-y: auto; 
   transform: translateX(-100%);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -236,6 +247,15 @@ const handleLogout = async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.btn-menu {
+  background: none;
+  border: 1px solid transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .menu-link {
