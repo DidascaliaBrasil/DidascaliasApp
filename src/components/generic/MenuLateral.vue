@@ -36,6 +36,7 @@
           <template v-else-if="tipoConta === 'facilitador'">
             <router-link to="/home" class="menu-link" @click="fecharMenu">Home</router-link>
             <router-link to="/meus-grupos-facilitador" class="menu-link" @click="fecharMenu">Gerenciar Grupos</router-link>
+            <router-link to="/criar-sala" class="menu-link" @click="fecharMenu">Criar Sala VR</router-link>
           </template>
 
           <template v-else-if="tipoConta === 'usuario'">
@@ -45,6 +46,13 @@
 
           <template v-else>
             <p class="menu-error">Perfil não identificado.</p>
+          </template>
+
+          <template v-if="userData?.FacilitadorPlus && tipoConta !== 'facilitador'">
+            <div class="divider" style="margin: 12px 0; background: #e2e8f0; height: 1px;"></div>
+            <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; padding-left: 14px; text-transform: uppercase;">Facilitador Plus</span>
+            <router-link to="/meus-grupos-facilitador" class="menu-link" @click="fecharMenu">Meus Grupos (Facilitador)</router-link>
+            <router-link to="/criar-sala" class="menu-link" @click="fecharMenu">Criar Sala VR</router-link>
           </template>
         </nav>
       </div>

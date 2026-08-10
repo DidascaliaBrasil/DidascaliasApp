@@ -25,6 +25,30 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
       meta: { requiresAuth: true } // Apenas usuários LOGADOS podem acessar
+    },
+    {
+      path: '/meus-grupos-facilitador',
+      name: 'meus-grupos-facilitador',
+      component: () => import('../views/MeusGruposFacilitadorView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/gerenciar-grupos',
+      name: 'gerenciar-grupos',
+      component: () => import('../views/GerenciarGruposInstituicaoView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/meus-grupos-usuario',
+      name: 'meus-grupos-usuario',
+      component: () => import('../views/MeusGruposUsuarioView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/criar-sala',
+      name: 'criar-sala',
+      component: () => import('../views/CriarSalaView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
@@ -45,21 +69,20 @@ const getCurrentUser = () => {
 }
 
 // Guarda de navegação global antes de cada mudança de rota
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, from) => {
   const user = await getCurrentUser()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
 
   if (requiresAuth && !user) {
     // Se a rota exige autenticação e o usuário não está logado, força ir para o Login
-    next('/')
+    return '/'
   } else if (requiresGuest && user) {
     // Se o usuário já está logado e tenta ir para Login/Cadastro, redireciona para a Home
-    next('/home')
-  } else {
-    // Permite a navegação normalmente nas demais situações
-    next()
+    return '/home'
   }
+  
+  return true
 })
 
 export default router

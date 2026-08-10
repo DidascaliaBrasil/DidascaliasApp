@@ -173,7 +173,7 @@ onMounted(() => {
         isLoading.value = false
       }
     } else {
-      router.push('/login')
+      router.push('/')
     }
   })
 })

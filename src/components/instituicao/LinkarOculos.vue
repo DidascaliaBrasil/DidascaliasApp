@@ -86,8 +86,8 @@ const formatarData = (dataIso) => {
 };
 
 onMounted(() => {
-  // Corrigido para minúsculo conforme o banco
-  const dispositivosRef = dbRef(db, 'dispositivos_vr');
+  // Busca diretamente os pedidos da instituição atual
+  const dispositivosRef = dbRef(db, `pedidos_registro/${props.instituicaoId}`);
   
   unsubscribe = onValue(dispositivosRef, (snapshot) => {
     loading.value = true;
@@ -96,10 +96,7 @@ onMounted(() => {
     
     if (data) {
       for (const [id, info] of Object.entries(data)) {
-        // Corrigido para instituicaoId com 'i' minúsculo conforme o banco
-        if (info.instituicaoId === props.instituicaoId) {
-          tempDevices.push({ id, ...info });
-        }
+        tempDevices.push({ id, ...info });
       }
     }
     
@@ -116,12 +113,11 @@ onUnmounted(() => {
 
 const acceptDevice = async (device) => {
   try {
-    // Corrigido 'instituicoes' e 'dispositivos_vr' para minúsculo
     const oculosInstituicaoRef = dbRef(db, `instituicoes/${props.instituicaoId}/oculos/${device.id}`);
-    const dispositivoVrRef = dbRef(db, `dispositivos_vr/${device.id}`);
+    const dispositivoVrRef = dbRef(db, `pedidos_registro/${props.instituicaoId}/${device.id}`);
 
     await set(oculosInstituicaoRef, {
-      dataRegistro: device.dataRegistro || '',
+      dataRegistro: device.dataPedido || '',
       modelo: device.modelo || '',
       instituicaoId: props.instituicaoId,
       Oculos_id: device.id
@@ -135,8 +131,7 @@ const acceptDevice = async (device) => {
 
 const denyDevice = async (deviceId) => {
   try {
-    // Corrigido para minúsculo
-    const dispositivoVrRef = dbRef(db, `dispositivos_vr/${deviceId}`);
+    const dispositivoVrRef = dbRef(db, `pedidos_registro/${props.instituicaoId}/${deviceId}`);
     await remove(dispositivoVrRef);
   } catch (error) {
     console.error("Erro ao negar dispositivo:", error);

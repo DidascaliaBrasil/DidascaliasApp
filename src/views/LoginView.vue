@@ -84,11 +84,15 @@
             </div>
 
             <div class="checkbox-group stagger-in-5">
-              <label class="cyber-checkbox">
-                <input type="checkbox" />
-                <span class="box"></span>
+              <div class="cyber-checkbox" @click="manterSessao = !manterSessao">
+                <span class="box" :style="manterSessao ? 'background-color: #0066FF; border-color: #0066FF;' : ''">
+                  <svg v-if="manterSessao" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="width:14px; height:14px;">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </span>
                 Manter sessão iniciada
-              </label>
+              </div>
             </div>
 
             <div class="btn-container stagger-in-6">
@@ -132,7 +136,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../firebase'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth'
 
 const router = useRouter()
 
@@ -140,6 +144,7 @@ const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const isLoading = ref(false)
+const manterSessao = ref(false)
 
 // Estado do Pop-up
 const feedback = ref({ 
@@ -167,6 +172,10 @@ const handleLogin = async () => {
   isLoading.value = true
 
   try {
+    // Define a persistência baseada na escolha do usuário
+    const persistenceType = manterSessao.value ? browserLocalPersistence : browserSessionPersistence;
+    await setPersistence(auth, persistenceType);
+
     // Tenta autenticar o usuário no Firebase
     await signInWithEmailAndPassword(auth, email.value, password.value)
     
