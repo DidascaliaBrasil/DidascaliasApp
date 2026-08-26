@@ -14,7 +14,7 @@
     <nav class="navbar">
       <div class="logo-area stagger-in">
         <img src="../assets/Didas_Logo.png" alt="Didascalias Logo" class="main-logo" />
-        <span class="brand-name">Didascalias</span>
+        <span class="brand-name notranslate" translate="no">Didascalias</span>
       </div>
     </nav>
 
@@ -28,6 +28,8 @@
         <HomeInstituicao 
           v-if="tipoNormalizado === 'instituicao'" 
           :user-data="userData" 
+          @abrir-linkar-oculos="isLinkarOculosOpen = true"
+          @abrir-gerenciar-oculos="isGerenciarOculosOpen = true"
         />
         
         <HomeFacilitador 

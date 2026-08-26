@@ -1,0 +1,66 @@
+/* ==========================================================================
+   ESTILOS GLOBAIS DE SUPRESSÃO E POLIMENTO DO GOOGLE TRANSLATE
+   ========================================================================== */
+
+/* Remove a barra superior, iframes e balões gerados automaticamente */
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame,
+.goog-te-balloon-frame,
+#goog-gt-tt,
+.goog-tooltip,
+.goog-tooltip:hover,
+.VIpgJd-ZVi9od-OR94Gd-PR6tc,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-ZVi9od-aZ2wEe-OiiCO,
+.VIpgJd-ZVi9od-l4eHX-hSRGPd,
+.VIpgJd-ZVi9od-xl07Ob-lTBxed {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  border: none !important;
+}
+
+/* Oculta qualquer iframe inserido pelo skiptranslate no topo */
+body > .skiptranslate:first-child,
+body > iframe.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+}
+
+/* Corrige o deslocamento de topo forçado pelo Google */
+html, body {
+  top: 0px !important;
+  position: static !important;
+}
+
+/* Oculta os seletores nativos feios */
+#google_translate_element,
+.goog-te-gadget,
+.goog-te-gadget-simple,
+.goog-te-gadget-icon,
+.goog-te-menu-value,
+.goog-te-combo {
+  display: none !important;
+}
+
+/* Remove qualquer realce de fundo amarelo ao passar o mouse em textos traduzidos */
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+font[style] {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Marcação de proteção para não traduzir nomes de marca, logos ou dados especiais */
+.notranslate,
+[translate="no"] {
+  -webkit-touch-callout: none;
+}

@@ -49,6 +49,24 @@ const router = createRouter({
       name: 'criar-sala',
       component: () => import('../views/CriarSalaView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/resultados-instituicao',
+      name: 'resultados-instituicao',
+      component: () => import('../views/ResultadosInstituicaoView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/resultados-facilitador',
+      name: 'resultados-facilitador',
+      component: () => import('../views/ResultadosFacilitadorView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/meus-resultados',
+      name: 'meus-resultados',
+      component: () => import('../views/MeusResultadosUsuarioView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
@@ -69,7 +87,7 @@ const getCurrentUser = () => {
 }
 
 // Guarda de navegação global antes de cada mudança de rota
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to) => {
   const user = await getCurrentUser()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresGuest = to.matched.some(record => record.meta.requiresGuest)

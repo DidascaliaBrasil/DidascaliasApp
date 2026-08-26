@@ -36,7 +36,7 @@
           <div class="auth-header stagger-in-2">
             <div class="logo-showcase">
               <img src="../assets/Didas_Logo.png" alt="Didascalias Logo" class="main-logo" />
-              <h1 class="brand-name">Didascalias</h1>
+              <h1 class="brand-name notranslate" translate="no">Didascalias</h1>
             </div>
             <h2>Criar uma conta</h2>
             <p>Preencha os seus dados para se registar no sistema.</p>
@@ -249,8 +249,7 @@ const handleCadastro = async () => {
     const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password)
     const user = userCredential.user
 
-    // 3. Define a pasta baseada no cargo (Usuarioes ou facilitadores) e gera ID curto
-    const pastaCargo = userType.value === 'Usuario' ? 'Usuarioes' : 'facilitadores'
+    // 3. Gera ID curto
     const shortId = user.uid.substring(0, 8).toUpperCase()
 
     // 4. Monta o pacote de dados do usuário

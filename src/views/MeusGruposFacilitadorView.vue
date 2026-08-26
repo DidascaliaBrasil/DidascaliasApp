@@ -12,7 +12,7 @@
     <nav class="navbar">
       <div class="logo-area stagger-in">
         <img src="../assets/Didas_Logo.png" alt="Didascalias Logo" class="main-logo" />
-        <span class="brand-name">Didascalias</span>
+        <span class="brand-name notranslate" translate="no">Didascalias</span>
       </div>
     </nav>
 
@@ -22,69 +22,120 @@
         <p>A carregar o ambiente...</p>
       </div>
 
-      <div v-else class="groups-section stagger-in-2">
-        <div class="profile-header">
-          <div class="user-avatar">{{ initials }}</div>
-          <div class="welcome-texts">
-            <h1 class="welcome-title">Gerenciar Grupos</h1>
-            <p class="welcome-subtitle">Crie grupos e selecione os participantes da sua instituição.</p>
+      <div v-else class="groups-container-glass stagger-in-2">
+        <!-- Hero Header Glass -->
+        <div class="profile-hero-glass">
+          <div class="profile-header-content">
+            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="welcome-texts">
+              <div class="badge-role-tag">
+                <span class="pulse-dot"></span>
+                <span>Criação de Grupos e Turmas</span>
+              </div>
+              <h1 class="welcome-title">Criar Novo Grupo de Alunos</h1>
+              <p class="welcome-subtitle">Nomeie sua turma e selecione os participantes cadastrados na sua instituição.</p>
+            </div>
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="action-section">
-          <div class="form-group">
-            <input 
-              v-model="novoGrupoNome" 
-              type="text" 
-              placeholder="Insira o Nome do Grupo" 
-              class="input-field" 
-            />
+        <!-- Card de Configuração do Nome do Grupo -->
+        <div class="glass-action-card">
+          <div class="group-input-row">
+            <div class="input-with-icon">
+              <span class="input-prefix-icon">✏️</span>
+              <input 
+                v-model="novoGrupoNome" 
+                type="text" 
+                placeholder="Insira o nome do grupo ou turma (ex: Turma 101 - Manhã)" 
+                class="glass-text-input" 
+              />
+            </div>
+            
             <button 
               @click="criarGrupo" 
-              class="btn-primary" 
+              class="btn-save-group-glass" 
               :disabled="isCreatingGroup || !novoGrupoNome.trim() || selectedMembers.length === 0"
             >
-              {{ isCreatingGroup ? 'Salvando...' : 'Salvar Grupo' }}
+              <span v-if="isCreatingGroup" class="spinner-btn"></span>
+              <span>{{ isCreatingGroup ? 'Salvando...' : 'Salvar Grupo' }}</span>
+              <span class="selected-counter" v-if="selectedMembers.length > 0">
+                {{ selectedMembers.length }}
+              </span>
             </button>
           </div>
-          <p v-if="mensagemGrupo" :class="['feedback-msg', { 'error': mensagemGrupo.includes('Erro') || mensagemGrupo.includes('Selecione') }]">
+
+          <div v-if="mensagemGrupo" :class="['feedback-toast-glass', { 'error': mensagemGrupo.includes('Erro') || mensagemGrupo.includes('Selecione') || mensagemGrupo.includes('vazio'), 'success': !mensagemGrupo.includes('Erro') && !mensagemGrupo.includes('Selecione') && !mensagemGrupo.includes('vazio') }]">
             {{ mensagemGrupo }}
-          </p>
+          </div>
         </div>
 
-        <div class="search-section">
-          <h3 class="section-title">Selecionar Participantes</h3>
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Pesquisar por nome ou e-mail..." 
-            class="input-field search-input" 
-          />
-        </div>
+        <!-- Seção de Seleção de Participantes -->
+        <section class="selection-section">
+          <div class="selection-header-glass">
+            <div class="selection-title-group">
+              <h3 class="section-title">Selecionar Participantes da Instituição</h3>
+              <span class="selected-pill">
+                {{ selectedMembers.length }} selecionado(s) de {{ membros.length }}
+              </span>
+            </div>
 
-        <div v-if="loadingMembros" class="sub-loading">Carregando membros da instituição...</div>
-        <div v-else class="cards-grid">
-          <div 
-            v-for="membro in membrosFiltrados" 
-            :key="membro.id" 
-            :class="['membro-card', { 'selected': isSelected(membro.id) }]"
-            @click="toggleSelection(membro.id)"
-          >
-            <div class="card-header">
-              <span class="label">{{ membro.tipoCadastro || membro.tipo }}</span>
-              <div class="checkbox-indicator">
-                <svg v-if="isSelected(membro.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
+            <!-- Busca Instantânea -->
+            <div class="search-box-glass">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Pesquisar por nome ou e-mail..." 
+                class="search-input-field" 
+              />
+            </div>
+          </div>
+
+          <div v-if="loadingMembros" class="sub-loading-glass">
+            <div class="mini-spinner"></div>
+            <span>Carregando membros da instituição...</span>
+          </div>
+
+          <div v-else class="cards-grid">
+            <div 
+              v-for="membro in membrosFiltrados" 
+              :key="membro.id" 
+              :class="['glass-card member-select-card', { 'is-selected': isSelected(membro.id) }]"
+              @click="toggleSelection(membro.id)"
+            >
+              <div class="card-top">
+                <span :class="['role-pill', `pill-${(membro.tipoCadastro || membro.tipo || '').toLowerCase()}`]">
+                  {{ membro.tipoCadastro || membro.tipo || 'Aluno' }}
+                </span>
+                
+                <div class="glass-checkbox">
+                  <svg v-if="isSelected(membro.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="member-profile-row">
+                <div class="membro-avatar-mini">
+                  {{ (membro.nome || 'U').charAt(0).toUpperCase() }}
+                </div>
+                <div class="member-meta">
+                  <span class="membro-name">{{ membro.nome }}</span>
+                  <span class="membro-email" :title="membro.email">{{ membro.email }}</span>
+                </div>
               </div>
             </div>
-            <span class="value">{{ membro.nome }}</span>
-            <span class="sub-value">{{ membro.email }}</span>
+
+            <div v-if="membrosFiltrados.length === 0" class="empty-state-glass">
+              <span class="empty-emoji">🔍</span>
+              <p>Nenhum membro encontrado com o termo de pesquisa informado.</p>
+            </div>
           </div>
-          <p v-if="membrosFiltrados.length === 0" class="empty-state">Nenhum membro encontrado.</p>
-        </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -233,7 +284,6 @@ const fetchMembrosInstituicao = async (instituicaoId) => {
       membros.value = Object.keys(todosUsuarios)
         .map(key => ({ id: key, ...todosUsuarios[key] }))
         .filter(u => u.instituicaoId === instituicaoId)
-        // Opcional: ordenar pelo nome
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
     }
   } catch (error) {
@@ -269,7 +319,7 @@ const criarGrupo = async () => {
         id: m.id,
         nome: m.nome,
         email: m.email,
-        tipo: m.tipoCadastro || m.tipo
+        tipo: m.tipoCadastro || m.tipo || 'Usuário'
       }
     })
 
@@ -284,6 +334,10 @@ const criarGrupo = async () => {
     mensagemGrupo.value = "Grupo salvo com sucesso!"
     novoGrupoNome.value = ""
     selectedMembers.value = []
+    
+    setTimeout(() => {
+      router.push('/home')
+    }, 1500)
   } catch (error) {
     console.error("Erro ao criar grupo:", error)
     mensagemGrupo.value = "Erro ao salvar o grupo."
@@ -295,157 +349,408 @@ const criarGrupo = async () => {
 </script>
 
 <style scoped>
-.groups-section {
+.groups-container-glass {
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
-  background: transparent;
-  animation: fadeUp 0.5s ease both;
+  animation: glassFadeUp 0.5s ease both;
 }
 
-.profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
-.user-avatar { width: 65px; height: 65px; background: linear-gradient(135deg, #0066FF, #10b981); color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; box-shadow: 0 8px 16px rgba(0, 102, 255, 0.2); }
-.welcome-title { margin: 0; font-size: 1.6rem; font-weight: 700; color: #0f172a; }
-.welcome-subtitle { margin: 4px 0 0 0; color: #64748b; font-size: 0.95rem; }
-
-.divider { height: 1px; background: #e2e8f0; margin: 24px 0; }
-
-.action-section { 
-  margin-bottom: 32px; 
-  padding: 24px; 
-  background: #ffffff; 
-  border: 1px solid #e2e8f0;
-  border-radius: 16px; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+.profile-hero-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  padding: 28px 32px;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.05);
+  margin-bottom: 28px;
 }
 
-.form-group { display: flex; gap: 12px; }
-
-.input-field { 
-  flex: 1; 
-  padding: 12px 16px; 
-  border-radius: 12px; 
-  border: 2px solid #e2e8f0; 
-  background: #f8fafc; 
-  color: #0f172a; 
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  outline: none;
+.profile-header-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
 }
 
-.input-field:focus {
-  border-color: #0066FF;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
+.user-avatar-glass {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #10b981 0%, #0071e3 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+  flex-shrink: 0;
 }
 
-.search-section {
+.welcome-texts {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-.search-input {
-  max-width: 400px;
+  gap: 4px;
 }
 
-.section-title { font-size: 1.2rem; font-weight: 600; color: #0f172a; }
+.badge-role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(236, 253, 245, 0.9);
+  border: 1px solid rgba(167, 243, 208, 0.9);
+  color: #059669;
+  align-self: flex-start;
+  margin-bottom: 4px;
+}
 
-.btn-primary { 
-  padding: 12px 24px; 
-  background-color: #0066FF; 
-  color: white; 
-  border: none; 
-  border-radius: 12px; 
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.welcome-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.welcome-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* Action Card */
+.glass-action-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  padding: 24px 28px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+  margin-bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.group-input-row {
+  display: flex;
+  gap: 14px;
+}
+
+.input-with-icon {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-prefix-icon {
+  position: absolute;
+  left: 16px;
+  font-size: 1.1rem;
+}
+
+.glass-text-input {
+  width: 100%;
+  padding: 14px 16px 14px 46px;
+  border-radius: 14px;
+  border: 2px solid rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  font-size: 0.98rem;
   font-weight: 600;
-  cursor: pointer; 
-  transition: all 0.2s ease;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.25s ease;
 }
 
-.btn-primary:hover:not(:disabled) { 
-  background-color: #0052cc; 
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 102, 255, 0.2);
+.glass-text-input:focus {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
 }
 
-.btn-primary:disabled { 
-  background-color: #94a3b8; 
-  cursor: not-allowed; 
-}
-
-.feedback-msg { margin-top: 12px; font-size: 0.9rem; color: #10b981; font-weight: 500; }
-.feedback-msg.error { color: #ef4444; }
-
-.cards-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
-  gap: 20px; 
-}
-
-.membro-card { 
-  display: flex; 
-  flex-direction: column; 
-  padding: 20px; 
-  background: #ffffff; 
-  border: 2px solid #e2e8f0;
-  border-radius: 16px; 
+.btn-save-group-glass {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 28px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 113, 227, 0.25);
   transition: all 0.2s ease;
-  user-select: none;
+  white-space: nowrap;
 }
 
-.membro-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-  border-color: #bfdbfe;
+.btn-save-group-glass:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 113, 227, 0.35);
 }
 
-.membro-card.selected {
-  border-color: #10b981;
-  background: #ecfdf5;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+.btn-save-group-glass:disabled {
+  background: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
-.card-header {
+.selected-counter {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+}
+
+.spinner-btn {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.feedback-toast-glass {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.feedback-toast-glass.success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.feedback-toast-glass.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+/* Selection Section */
+.selection-section {
+  width: 100%;
+}
+
+.selection-header-glass {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.checkbox-indicator {
+.selection-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.selected-pill {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid #a7f3d0;
+}
+
+.search-box-glass {
+  position: relative;
+  min-width: 280px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+}
+
+.search-input-field {
+  width: 100%;
+  padding: 10px 14px 10px 42px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(203, 213, 225, 0.8);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input-field:focus {
+  border-color: #0071e3;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+}
+
+/* Cards Grid Glass */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.glass-card.member-select-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border: 2px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-card.member-select-card:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.glass-card.member-select-card.is-selected {
+  border-color: #10b981;
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.9), rgba(209, 250, 229, 0.75));
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.18);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.glass-checkbox {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
-  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  border: 2px solid rgba(203, 213, 225, 0.9);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.membro-card.selected .checkbox-indicator {
+.member-select-card.is-selected .glass-checkbox {
   background: #10b981;
   border-color: #10b981;
 }
 
-.label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-.membro-card.selected .label { color: #047857; }
-.value { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
-.sub-value { font-size: 0.85rem; color: #64748b; }
+.glass-checkbox svg { width: 14px; height: 14px; }
 
-.sub-loading { color: #64748b; font-style: italic; font-size: 0.95rem; padding: 20px 0; }
-.empty-state { color: #64748b; font-size: 0.95rem; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px dashed #cbd5e1; grid-column: 1 / -1; }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.member-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-@media (max-width: 600px) {
-  .form-group { flex-direction: column; }
-  .btn-primary { width: 100%; }
+.membro-avatar-mini {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0071e3, #10b981);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.member-meta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.membro-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.membro-email {
+  font-size: 0.78rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.role-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.pill-facilitador { background: #ecfdf5; color: #059669; }
+.pill-usuario { background: #eff6ff; color: #0071e3; }
+
+.sub-loading-glass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.mini-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid rgba(0, 113, 227, 0.2);
+  border-top-color: #0071e3;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.empty-state-glass {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 50px 20px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  border: 2px dashed rgba(203, 213, 225, 0.8);
+  border-radius: 20px;
+  color: #64748b;
+}
+
+.empty-emoji { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+
+@media (max-width: 680px) {
+  .group-input-row { flex-direction: column; }
+  .btn-save-group-glass { padding: 14px; justify-content: center; }
+  .search-box-glass { min-width: 100%; }
 }
 </style>

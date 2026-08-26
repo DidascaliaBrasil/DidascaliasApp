@@ -48,7 +48,7 @@
           <div class="auth-header stagger-in-2">
             <div class="logo-showcase">
               <img src="../assets/Didas_Logo.png" alt="Didascalias Logo" class="main-logo" />
-              <h1 class="brand-name">Didascalias</h1>
+              <h1 class="brand-name notranslate" translate="no">Didascalias</h1>
             </div>
             <h2>Bem-vindo!</h2>
             <p>Introduza as suas credenciais para acessar o sistema.</p>
@@ -117,7 +117,7 @@
 
           <div class="partners-section stagger-in-7">
             <p class="partners-title">Parceiros do Didascalias</p>
-            <div class="partners-grid">
+            <div class="partners-grid notranslate" translate="no">
               <div class="partner-logo-wrapper"><img src="../assets/Affect.png" alt="Affect" class="partner-img" onerror="this.style.opacity='0'; this.parentElement.classList.add('fallback-box');" /></div>
               <div class="partner-logo-wrapper"><img src="../assets/Agora.png" alt="Agora" class="partner-img" onerror="this.style.opacity='0'; this.parentElement.classList.add('fallback-box');" /></div>
               <div class="partner-logo-wrapper"><img src="../assets/UAB.png" alt="UAB" class="partner-img" onerror="this.style.opacity='0'; this.parentElement.classList.add('fallback-box');" /></div>
