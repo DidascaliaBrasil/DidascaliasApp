@@ -9,6 +9,7 @@
     "dev:electron": "vite --mode electron",
     "build:web": "vite build --mode web",
     "build:electron": "vite build --mode electron && electron-builder",
+    "predeploy": "npm run build:web",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",
     "lint": "run-s lint:*",
