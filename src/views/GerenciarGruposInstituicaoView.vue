@@ -26,7 +26,7 @@
         <!-- Header Hero Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -72,11 +72,11 @@
                 </span>
               </div>
 
-              <h4 class="grupo-title">{{ grupo.nome }}</h4>
+              <h4 class="grupo-title notranslate" translate="no">{{ grupo.nome }}</h4>
               
               <div class="facilitador-info-pill">
                 <span class="f-label">Facilitador Responsável:</span>
-                <span class="f-name">{{ grupo.facilitadorNome || 'Não informado' }}</span>
+                <span class="f-name notranslate" translate="no">{{ grupo.facilitadorNome || 'Não informado' }}</span>
               </div>
 
               <!-- Mini lista de participantes -->
@@ -84,7 +84,8 @@
                 <div 
                   v-for="(part, idx) in grupo.participantes.slice(0, 4)" 
                   :key="idx" 
-                  class="preview-avatar"
+                  class="preview-avatar notranslate"
+                  translate="no"
                   :title="part.nome || part.email"
                 >
                   {{ (part.nome || 'U').charAt(0).toUpperCase() }}
@@ -110,13 +111,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { database } from '../firebase'
 import { ref as dbRef, get } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
 
 import MenuLateral from '../components/generic/MenuLateral.vue' 
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
 const userData = ref({})
 
@@ -125,73 +127,27 @@ const loadingGrupos = ref(true)
 
 const initials = computed(() => {
   const nome = userData.value.nomeFaculdade || userData.value.nomeInstituicao || userData.value.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nomes = String(nome).trim().split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const shortId = user.uid.substring(0, 8).toUpperCase()
-        const fullId = user.uid
-        
-        let dataEncontrada = null
-        let idUsado = null
-        let tipoConta = null
-
-        const paths = [
-          { ref: `instituicoes/${shortId}`, typeFallback: 'Instituicao' },
-          { ref: `instituicoes/${fullId}`, typeFallback: 'Instituicao' }
-        ]
-
-        for (const path of paths) {
-          const snap = await get(dbRef(database, path.ref))
-          if (snap.exists()) {
-            dataEncontrada = snap.val()
-            idUsado = path.ref.split('/')[1] 
-            tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-            break
-          }
-        }
-
-        if (!dataEncontrada) {
-          const instSnap = await get(dbRef(database, 'instituicoes'))
-          if (instSnap.exists()) {
-            const instituicoes = instSnap.val()
-            for (const key in instituicoes) {
-              if (instituicoes[key].email === user.email) {
-                dataEncontrada = instituicoes[key]
-                idUsado = key
-                tipoConta = 'Instituicao'
-                break
-              }
-            }
-          }
-        }
-
-        if (dataEncontrada) {
-          userData.value = {
-            email: user.email, 
-            ...dataEncontrada,
-            id: idUsado,
-            tipo: tipoConta
-          }
-          
-          await fetchGrupos(idUsado)
-        } else {
-          router.push('/')
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error)
-      } finally {
-        isLoading.value = false
-      }
+onMounted(async () => {
+  try {
+    const profile = await authStore.getUserProfile()
+    if (profile && profile.tipo !== 'indefinido') {
+      userData.value = profile
+      await fetchGrupos(profile.id || profile.instituicaoId)
     } else {
       router.push('/')
     }
-  })
+  } catch (error) {
+    console.error("Erro ao buscar dados:", error)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 const fetchGrupos = async (instituicaoId) => {
@@ -242,16 +198,23 @@ const fetchGrupos = async (instituicaoId) => {
 .user-avatar-glass {
   width: 72px;
   height: 72px;
+  min-width: 72px;
+  min-height: 72px;
   border-radius: 20px;
   background: linear-gradient(135deg, #0071e3 0%, #3b82f6 50%, #10b981 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  text-align: center;
+  padding: 4px;
+  letter-spacing: -0.5px;
+  line-height: 1;
 }
 
 .welcome-texts {
@@ -347,6 +310,9 @@ const fetchGrupos = async (instituicaoId) => {
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .glass-card:hover {
@@ -360,6 +326,8 @@ const fetchGrupos = async (instituicaoId) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 14px;
 }
 
@@ -373,6 +341,7 @@ const fetchGrupos = async (instituicaoId) => {
   justify-content: center;
   color: #0071e3;
   border: 1px solid #bfdbfe;
+  flex-shrink: 0;
 }
 
 .group-icon-pill svg {
@@ -388,6 +357,8 @@ const fetchGrupos = async (instituicaoId) => {
   padding: 4px 10px;
   border-radius: 9999px;
   border: 1px solid #a7f3d0;
+  white-space: normal;
+  text-align: center;
 }
 
 .grupo-title {
@@ -395,6 +366,9 @@ const fetchGrupos = async (instituicaoId) => {
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 10px 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 .facilitador-info-pill {
@@ -406,6 +380,8 @@ const fetchGrupos = async (instituicaoId) => {
   flex-direction: column;
   gap: 2px;
   margin-bottom: 16px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .f-label {
@@ -413,12 +389,17 @@ const fetchGrupos = async (instituicaoId) => {
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 .f-name {
   font-size: 0.88rem;
   font-weight: 700;
   color: #0f172a;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 .participantes-preview {

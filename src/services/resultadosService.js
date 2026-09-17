@@ -1,4 +1,4 @@
-import { ref as dbRef, get } from 'firebase/database'
+import { ref as dbRef, get, query, orderByChild, equalTo } from 'firebase/database'
 import { database } from '../firebase'
 
 /**
@@ -232,50 +232,42 @@ export async function carregarDadosCompletosInstituicao(identificadorInstituicao
     idsAlternativos.forEach(id => { if (id) idsSet.add(normalizarId(id)) })
   }
 
-  const matchId = (val) => {
-    if (!val) return false
-    const norm = normalizarId(val)
-    for (const instId of idsSet) {
-      if (norm === instId || (instId.length >= 8 && norm.startsWith(instId.substring(0, 8)))) {
-        return true
-      }
-    }
-    return false
-  }
-
   try {
-    // 1. Buscar todos os Usuários da Instituição
-    const usersRef = dbRef(database, 'usuarios')
-    const usersSnap = await get(usersRef)
+    // 1. Buscar Usuários da Instituição via query indexada (JAMAIS baixa a raiz 'usuarios' inteira)
     const usuariosList = []
     const usuariosMap = {}
     const facilitadoresIdsSet = new Set()
+    const usuariosProcessadosSet = new Set()
 
-    if (usersSnap.exists()) {
-      const rawUsers = usersSnap.val()
-      for (const k in rawUsers) {
-        const u = rawUsers[k]
-        if (!u) continue
+    for (const instId of idsSet) {
+      const qUsers = query(dbRef(database, 'usuarios'), orderByChild('instituicaoId'), equalTo(instId))
+      const usersSnap = await get(qUsers)
+      if (usersSnap.exists()) {
+        const rawUsers = usersSnap.val()
+        for (const k in rawUsers) {
+          if (!usuariosProcessadosSet.has(k)) {
+            usuariosProcessadosSet.add(k)
+            const u = rawUsers[k]
+            if (!u) continue
 
-        const pertence = matchId(u.instituicaoId) || idsSet.has(normalizarId(k))
-        if (pertence) {
-          const userObj = { id: k, ...u }
-          usuariosList.push(userObj)
-          usuariosMap[k] = userObj
-          usuariosMap[normalizarId(k)] = userObj
-          
-          const tipo = (u.tipoCadastro || u.tipo || '').toLowerCase()
-          if (tipo.includes('facilitador')) {
-            facilitadoresIdsSet.add(k)
-            facilitadoresIdsSet.add(normalizarId(k))
-            if (u.idCurto) facilitadoresIdsSet.add(normalizarId(u.idCurto))
-            if (u.authUid) facilitadoresIdsSet.add(normalizarId(u.authUid))
+            const userObj = { id: k, ...u }
+            usuariosList.push(userObj)
+            usuariosMap[k] = userObj
+            usuariosMap[normalizarId(k)] = userObj
+
+            const tipo = (u.tipoCadastro || u.tipo || '').toLowerCase()
+            if (tipo.includes('facilitador')) {
+              facilitadoresIdsSet.add(k)
+              facilitadoresIdsSet.add(normalizarId(k))
+              if (u.idCurto) facilitadoresIdsSet.add(normalizarId(u.idCurto))
+              if (u.authUid) facilitadoresIdsSet.add(normalizarId(u.authUid))
+            }
           }
         }
       }
     }
 
-    // 2. Buscar Grupos da Instituição (varre todos os nós de instituição possíveis)
+    // 2. Buscar Grupos da Instituição (varre nós de grupos das instituições identificadas)
     const gruposList = []
     const gruposMap = {}
     const gruposChavesJaProcessadas = new Set()
@@ -296,84 +288,101 @@ export async function carregarDadosCompletosInstituicao(identificadorInstituicao
       }
     }
 
-    // 3. Buscar Salas de Aula VR (classroom_configs)
-    const salasRef = dbRef(database, 'classroom_configs')
-    const salasSnap = await get(salasRef)
+    // 3. Buscar Salas de Aula VR (classroom_configs) via queries indexadas (JAMAIS baixa a raiz inteira)
     const salasList = []
     let sessoesTodas = []
+    const salasProcessadasSet = new Set()
 
-    if (salasSnap.exists()) {
-      const rawSalas = salasSnap.val()
-      for (const k in rawSalas) {
-        const s = rawSalas[k]
-        if (!s) continue
+    const processarSala = (k, s) => {
+      if (!s) return
 
-        // Verifica se a sala pertence à instituição (por instituicaoId direto OU por facilitador da instituição)
-        const pertenceInstituicao = matchId(s.instituicaoId) || 
-                                    facilitadoresIdsSet.has(s.facilitadorId) || 
-                                    facilitadoresIdsSet.has(normalizarId(s.facilitadorId))
+      let alunosVinculados = []
+      let nomeAlvo
 
-        if (pertenceInstituicao) {
-          // Determina alunos vinculados à sala
-          let alunosVinculados = []
-          let nomeAlvo = ''
+      if (s.targetType === 'grupo' && s.targetId && gruposMap[s.targetId]) {
+        const grp = gruposMap[s.targetId]
+        nomeAlvo = grp.nome || 'Grupo / Turma'
+        alunosVinculados = Array.isArray(grp.participantes) ? grp.participantes : []
+      } else if (s.targetType === 'aluno' && s.targetId) {
+        const al = usuariosMap[s.targetId] || usuariosMap[normalizarId(s.targetId)]
+        if (al) {
+          nomeAlvo = al.nome || 'Aluno Individual'
+          alunosVinculados = [{ id: s.targetId, nome: al.nome, email: al.email || '', tipo: al.tipo || 'Aluno' }]
+        } else {
+          nomeAlvo = `Aluno (${s.targetId})`
+          alunosVinculados = [{ id: s.targetId, nome: nomeAlvo, email: '' }]
+        }
+      } else {
+        nomeAlvo = s.roomName || 'Sala VR'
+      }
 
-          if (s.targetType === 'grupo' && s.targetId && gruposMap[s.targetId]) {
-            const grp = gruposMap[s.targetId]
-            nomeAlvo = grp.nome || 'Grupo / Turma'
-            alunosVinculados = Array.isArray(grp.participantes) ? grp.participantes : []
-          } else if (s.targetType === 'aluno' && s.targetId) {
-            const al = usuariosMap[s.targetId] || usuariosMap[normalizarId(s.targetId)]
-            if (al) {
-              nomeAlvo = al.nome || 'Aluno Individual'
-              alunosVinculados = [{ id: s.targetId, nome: al.nome, email: al.email || '', tipo: al.tipo || 'Aluno' }]
-            } else {
-              nomeAlvo = `Aluno (${s.targetId})`
-              alunosVinculados = [{ id: s.targetId, nome: nomeAlvo, email: '' }]
-            }
-          } else {
-            nomeAlvo = s.roomName || 'Sala VR'
+      // Nome do Facilitador Responsável
+      const facilitadorObj = usuariosMap[s.facilitadorId] || usuariosMap[normalizarId(s.facilitadorId)]
+      const facilitadorNome = facilitadorObj?.nome || (s.facilitadorId ? `Facilitador (${s.facilitadorId.substring(0, 8)})` : 'Não informado')
+
+      // Extrai e normaliza sessões
+      const sessoes = extrairSessoes({ id: k, ...s, facilitadorNome }, usuariosMap, alunosVinculados)
+      sessoesTodas = sessoesTodas.concat(sessoes)
+
+      // Calcula estatísticas consolidadas da sala
+      const totalSessoes = sessoes.length
+      const tempoTotalSegundos = sessoes.reduce((acc, sess) => acc + sess.duracaoSegundos, 0)
+      const tempoMedioSegundos = totalSessoes > 0 ? Math.round(tempoTotalSegundos / totalSessoes) : 0
+      const totalIntentsSala = sessoes.reduce((acc, sess) => acc + sess.totalIntents, 0)
+
+      // Participantes únicos que já jogaram
+      const participantesUnicosIds = [...new Set(sessoes.map(sess => normalizarId(sess.alunoId || sess.activeParticipantId)))].filter(Boolean)
+
+      const totalAlunosVinculados = alunosVinculados.length
+      const taxaConclusao = totalAlunosVinculados > 0 
+        ? Math.min(100, Math.round((participantesUnicosIds.length / totalAlunosVinculados) * 100))
+        : (totalSessoes > 0 ? 100 : 0)
+
+      salasList.push({
+        id: k,
+        ...s,
+        facilitadorNome,
+        facilitadorObj,
+        nomeAlvo,
+        alunosVinculados,
+        sessoes,
+        totalSessoes,
+        tempoTotalSegundos,
+        tempoTotalFormatado: formatarDuracao(tempoTotalSegundos),
+        tempoMedioSegundos,
+        tempoMedioFormatado: formatarDuracao(tempoMedioSegundos),
+        totalIntentsSala,
+        participantesUnicosIds,
+        taxaConclusao
+      })
+    }
+
+    // 3a. Query indexada por instituicaoId para cada ID da instituição
+    for (const instId of idsSet) {
+      const qSalas = query(dbRef(database, 'classroom_configs'), orderByChild('instituicaoId'), equalTo(instId))
+      const salasSnap = await get(qSalas)
+      if (salasSnap.exists()) {
+        const rawSalas = salasSnap.val()
+        for (const k in rawSalas) {
+          if (!salasProcessadasSet.has(k)) {
+            salasProcessadasSet.add(k)
+            processarSala(k, rawSalas[k])
           }
+        }
+      }
+    }
 
-          // Nome do Facilitador Responsável
-          const facilitadorObj = usuariosMap[s.facilitadorId] || usuariosMap[normalizarId(s.facilitadorId)]
-          const facilitadorNome = facilitadorObj?.nome || (s.facilitadorId ? `Facilitador (${s.facilitadorId.substring(0, 8)})` : 'Não informado')
-
-          // Extrai e normaliza sessões
-          const sessoes = extrairSessoes({ id: k, ...s, facilitadorNome }, usuariosMap, alunosVinculados)
-          sessoesTodas = sessoesTodas.concat(sessoes)
-
-          // Calcula estatísticas consolidadas da sala
-          const totalSessoes = sessoes.length
-          const tempoTotalSegundos = sessoes.reduce((acc, sess) => acc + sess.duracaoSegundos, 0)
-          const tempoMedioSegundos = totalSessoes > 0 ? Math.round(tempoTotalSegundos / totalSessoes) : 0
-          const totalIntentsSala = sessoes.reduce((acc, sess) => acc + sess.totalIntents, 0)
-
-          // Participantes únicos que já jogaram
-          const participantesUnicosIds = [...new Set(sessoes.map(sess => normalizarId(sess.alunoId || sess.activeParticipantId)))].filter(Boolean)
-          
-          const totalAlunosVinculados = alunosVinculados.length
-          const taxaConclusao = totalAlunosVinculados > 0 
-            ? Math.min(100, Math.round((participantesUnicosIds.length / totalAlunosVinculados) * 100))
-            : (totalSessoes > 0 ? 100 : 0)
-
-          salasList.push({
-            id: k,
-            ...s,
-            facilitadorNome,
-            facilitadorObj,
-            nomeAlvo,
-            alunosVinculados,
-            sessoes,
-            totalSessoes,
-            tempoTotalSegundos,
-            tempoTotalFormatado: formatarDuracao(tempoTotalSegundos),
-            tempoMedioSegundos,
-            tempoMedioFormatado: formatarDuracao(tempoMedioSegundos),
-            totalIntentsSala,
-            participantesUnicosIds,
-            taxaConclusao
-          })
+    // 3b. Query indexada para facilitadores vinculados (caso alguma sala tenha sido vinculada por facilitadorId)
+    for (const fId of facilitadoresIdsSet) {
+      const qSalasF = query(dbRef(database, 'classroom_configs'), orderByChild('facilitadorId'), equalTo(fId))
+      const salasFSnap = await get(qSalasF)
+      if (salasFSnap.exists()) {
+        const rawSalasF = salasFSnap.val()
+        for (const k in rawSalasF) {
+          if (!salasProcessadasSet.has(k)) {
+            salasProcessadasSet.add(k)
+            processarSala(k, rawSalasF[k])
+          }
         }
       }
     }

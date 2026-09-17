@@ -4,7 +4,7 @@
     <!-- Hero Profile Header com Glassmorphism -->
     <div :class="['profile-hero-glass', { 'plus-hero': userData?.FacilitadorPlus }]">
       <div class="profile-header-content">
-        <div :class="['user-avatar-glass', { 'plus-avatar': userData?.FacilitadorPlus }]">
+        <div :class="['user-avatar-glass notranslate', { 'plus-avatar': userData?.FacilitadorPlus }]" translate="no">
           {{ initials }}
         </div>
         <div class="welcome-texts">
@@ -13,13 +13,13 @@
               <span class="pulse-dot"></span>
               <span>{{ userData?.FacilitadorPlus ? 'Facilitador Plus VIP' : 'Facilitador de Grupos' }}</span>
             </div>
-            <div class="inst-pill" v-if="nomeInstituicao">
+            <div class="inst-pill notranslate" translate="no" v-if="nomeInstituicao">
               <span class="inst-icon">🏛️</span>
               <span>{{ nomeInstituicao }}</span>
             </div>
           </div>
           <h1 class="welcome-title">
-            Bem-vindo(a), <span :class="['highlight-gradient', { 'plus-gradient': userData?.FacilitadorPlus }]">{{ userData.nome }}</span>!
+            Bem-vindo(a), <span :class="['highlight-gradient notranslate', { 'plus-gradient': userData?.FacilitadorPlus }]" translate="no">{{ userData.nome }}</span>!
           </h1>
           <p class="welcome-subtitle">Gerencie suas turmas, crie ambientes virtuais e configure sessões imersivas.</p>
         </div>
@@ -105,7 +105,7 @@
             </span>
           </div>
 
-          <h4 class="grupo-title">{{ grupo.nome }}</h4>
+          <h4 class="grupo-title notranslate" translate="no">{{ grupo.nome }}</h4>
           <span class="date-created">Criado em: {{ formatDataCurta(grupo.criadoEm) }}</span>
 
           <div class="card-footer-action">
@@ -149,13 +149,36 @@
           @click="abrirDetalhesSala(sala)"
         >
           <div class="card-top">
-            <span class="role-pill pill-vr">SALA VR</span>
-            <span class="target-tag">
-              {{ sala.targetType === 'grupo' ? '👥 Grupo' : '👤 Individual' }}
-            </span>
+            <div class="tags-left-wrap">
+              <span class="role-pill pill-vr">SALA VR</span>
+              <span :class="['situacao-badge', isSalaAtiva(sala) ? 'situacao-ativa' : 'situacao-inativa']">
+                <span class="situacao-dot"></span>
+                {{ isSalaAtiva(sala) ? 'Ativa' : 'Inativa' }}
+              </span>
+            </div>
+            <div class="card-top-actions">
+              <span class="target-tag">
+                {{ sala.targetType === 'grupo' ? '👥 Grupo' : '👤 Individual' }}
+              </span>
+              <button 
+                class="btn-card-delete-sala" 
+                :title="isSalaAtiva(sala) ? 'Sala ativa: exclusão bloqueada' : 'Excluir Sala VR'" 
+                :aria-label="isSalaAtiva(sala) ? 'Sala ativa: exclusão bloqueada' : 'Excluir Sala VR'"
+                @click.stop="confirmarExclusaoSala(sala)"
+                :disabled="excluindoSala || isSalaAtiva(sala)"
+                :class="{ 'btn-delete-disabled': isSalaAtiva(sala) }"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="trash-icon-svg">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+              </button>
+            </div>
           </div>
 
-          <h4 class="sala-name">{{ sala.roomName || 'Sala sem nome' }}</h4>
+          <h4 class="sala-name notranslate" translate="no">{{ sala.roomName || 'Sala sem nome' }}</h4>
           
           <div class="sala-chips-row">
             <span class="chip-info">Mesas: {{ sala.numDesks || 0 }}</span>
@@ -209,7 +232,7 @@
                 </div>
 
                 <div v-else class="title-with-edit">
-                  <h2 class="panel-title-text">{{ grupoSelecionado.nome }}</h2>
+                  <h2 class="panel-title-text notranslate" translate="no">{{ grupoSelecionado.nome }}</h2>
                   <button class="btn-icon-rename" title="Renomear Grupo" @click="iniciarEdicaoNome">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                   </button>
@@ -256,10 +279,10 @@
 
                   <div v-else class="available-members-scroll">
                     <div v-for="user in membrosDisponiveisFiltrados" :key="user.id" class="available-member-chip">
-                      <div class="user-avatar-sm">{{ (user.nome || 'U').charAt(0).toUpperCase() }}</div>
+                      <div class="user-avatar-sm notranslate" translate="no">{{ (user.nome || 'U').charAt(0).toUpperCase() }}</div>
                       <div class="user-meta-info">
-                        <span class="u-name">{{ user.nome }}</span>
-                        <span class="u-mail">{{ user.email }}</span>
+                        <span class="u-name notranslate" translate="no">{{ user.nome }}</span>
+                        <span class="u-mail notranslate" translate="no">{{ user.email }}</span>
                       </div>
                       <button class="btn-add-chip" title="Adicionar ao grupo" @click="adicionarParticipante(user)" :disabled="loadingAction">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -274,10 +297,10 @@
               <!-- Lista de Participantes Atuais -->
               <div class="current-members-list" v-if="grupoSelecionado.participantes && grupoSelecionado.participantes.length > 0">
                 <div v-for="part in grupoSelecionado.participantes" :key="part.id" class="member-row-glass">
-                  <div class="member-avatar">{{ (part.nome || 'U').charAt(0).toUpperCase() }}</div>
+                  <div class="member-avatar notranslate" translate="no">{{ (part.nome || 'U').charAt(0).toUpperCase() }}</div>
                   <div class="member-info">
-                    <span class="member-name">{{ part.nome }}</span>
-                    <span class="member-email">{{ part.email }}</span>
+                    <span class="member-name notranslate" translate="no">{{ part.nome }}</span>
+                    <span class="member-email notranslate" translate="no">{{ part.email }}</span>
                   </div>
                   <span class="member-role-tag">{{ part.tipo || 'Aluno' }}</span>
                   <button class="btn-remove-member" title="Remover do grupo" @click="removerParticipante(part)" :disabled="loadingAction">
@@ -308,114 +331,86 @@
       </Transition>
     </Teleport>
 
-    <!-- Modal Apple Glass de Configuração da Sessão Ativa da Sala VR -->
+    <!-- Modal Elegante de Confirmação de Exclusão de Sala VR (Substitui Alert Feio) -->
     <Teleport to="body">
       <Transition name="glass-modal">
-        <div v-if="salaSelecionada" class="modal-overlay" @click.self="fecharDetalhesSala">
-          <div class="modal-glass-container" @click.stop>
+        <div v-if="salaParaExcluir" class="delete-modal-overlay" @click.self="cancelarExclusao">
+          <div class="delete-modal-box" @click.stop>
             
-            <div class="modal-header">
-              <div class="modal-title-wrapper">
-                <span class="modal-tag">CONFIGURAÇÃO DE SESSÃO VR</span>
-                <h3 class="modal-title">{{ salaSelecionada.roomName || 'Sala VR' }}</h3>
+            <!-- Ícone de Alerta com Glow -->
+            <div class="delete-icon-wrapper">
+              <div class="delete-icon-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="delete-warn-svg">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
               </div>
-              <button class="close-btn" @click="fecharDetalhesSala" aria-label="Fechar modal">&times;</button>
             </div>
 
-            <div class="modal-body">
-              <!-- Grid de Especificações da Sala -->
-              <div class="vr-specs-glass">
-                <div class="spec-item">
-                  <span class="spec-label">Público-Alvo</span>
-                  <span class="spec-value">{{ salaSelecionada.targetType === 'grupo' ? 'Grupo / Turma' : 'Aluno Individual' }}</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-label">Meninos / Meninas</span>
-                  <span class="spec-value">{{ salaSelecionada.numBoys }} 👦 / {{ salaSelecionada.numGirls }} 👧</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-label">Mesas / Formato</span>
-                  <span class="spec-value">{{ salaSelecionada.numDesks }} mesas (Shape {{ salaSelecionada.shape }})</span>
-                </div>
-                <div class="spec-item">
-                  <span class="spec-label">Fileiras / Raio</span>
-                  <span class="spec-value">{{ salaSelecionada.rows }} fileiras (Raio {{ salaSelecionada.radius }})</span>
-                </div>
-              </div>
-
-              <div class="divider-subtle"></div>
-              
-              <!-- Seção de Sessão Ativa -->
-              <h4 class="section-subtitle">Dispositivo VR e Participante Ativo</h4>
-              <p class="subtitle-hint">Selecione o óculos físico e o estudante que estará jogando nesta sessão.</p>
-
-              <div v-if="loadingDetalhes" class="sub-loading-glass">
-                <div class="mini-spinner"></div>
-                <span>Carregando dispositivos e participantes...</span>
-              </div>
-              
-              <div v-else class="active-config-form">
-                
-                <!-- Seleção do Óculos -->
-                <div class="form-group-glass">
-                  <label class="form-label">
-                    <span class="label-icon">🥽</span>
-                    Óculos VR Vinculado
-                  </label>
-                  <select v-model="selectedActiveOculos" class="glass-select" :disabled="salvandoAtivos">
-                    <option :value="null">Nenhum (Selecione um dispositivo)</option>
-                    <option v-for="oculos in oculosDisponiveis" :key="oculos.id" :value="oculos.id">
-                      {{ oculos.modelo || 'Óculos VR' }} - N° {{ oculos.numero_oculos || oculos.id.substring(0, 6) }}
-                    </option>
-                  </select>
-                  <p v-if="oculosDisponiveis.length === 0" class="empty-hint">Nenhum óculos cadastrado na instituição.</p>
-                </div>
-                
-                <!-- Seleção de Participante Ativo -->
-                <div class="form-group-glass">
-                  <label class="form-label">
-                    <span class="label-icon">👤</span>
-                    Participante Ativo na Sala
-                  </label>
-                  <div class="participants-scroll-list">
-                    <label 
-                      v-for="p in participantesSala" 
-                      :key="p.id" 
-                      :class="['participant-card-option', { 'is-selected': selectedActiveParticipant === p.id }]"
-                    >
-                      <input 
-                        type="radio" 
-                        name="activeParticipant" 
-                        :value="p.id" 
-                        v-model="selectedActiveParticipant" 
-                        :disabled="salaSelecionada.targetType === 'aluno' || salvandoAtivos"
-                      />
-                      <div class="p-option-avatar">
-                        {{ (p.nome || 'P').charAt(0).toUpperCase() }}
-                      </div>
-                      <div class="p-option-info">
-                        <span class="p-option-name">{{ p.nome }}</span>
-                        <span class="p-option-email">{{ p.email }}</span>
-                      </div>
-                      <span v-if="salaSelecionada.targetType === 'aluno'" class="p-option-tag">ALUNO FIXO</span>
-                    </label>
-                    <p v-if="participantesSala.length === 0" class="empty-hint">Nenhum participante disponível neste grupo.</p>
-                  </div>
-                </div>
-
-                <!-- Feedback Toast -->
-                <div class="feedback-toast" v-if="mensagemAtivos">
-                  <p :class="['feedback-text', tipoMensagem]">{{ mensagemAtivos }}</p>
-                </div>
-
-                <!-- Botão de Salvar -->
-                <button class="btn-save-session" @click="salvarConfiguracoesAtivas" :disabled="salvandoAtivos">
-                  <span v-if="salvandoAtivos" class="btn-spinner"></span>
-                  <span>{{ salvandoAtivos ? 'Salvando Configuração...' : 'Salvar Configurações da Sessão' }}</span>
+            <!-- Caso Sem Permissão -->
+            <template v-if="salaParaExcluir.semPermissao">
+              <h3 class="delete-modal-title">Ação Não Permitida</h3>
+              <p class="delete-modal-subdesc">
+                Você só possui autorização para excluir as salas VR que você mesmo criou.
+              </p>
+              <div class="delete-modal-actions single-action">
+                <button class="btn-cancel-delete" @click="cancelarExclusao">
+                  Entendido
                 </button>
               </div>
+            </template>
 
-            </div>
+            <!-- Caso Com Permissão: Confirmação Estilizada -->
+            <template v-else>
+              <h3 class="delete-modal-title">Excluir Sala VR?</h3>
+              <div class="delete-modal-room-badge notranslate" translate="no">
+                <span class="room-badge-icon">🥽</span>
+                <span class="room-name-text">{{ salaParaExcluir.roomName || 'Sala VR' }}</span>
+              </div>
+
+              <div class="delete-modal-points">
+                <div class="delete-point-row">
+                  <span class="bullet-dot"></span>
+                  <span>Todas as configurações desta sala serão apagadas do sistema.</span>
+                </div>
+                <div class="delete-point-row">
+                  <span class="bullet-dot"></span>
+                  <span>Histórico, sessões e telemetria gerados no VR serão excluídos permanentemente.</span>
+                </div>
+                <div class="delete-point-row alert">
+                  <span class="bullet-dot red"></span>
+                  <span>Esta operação é definitiva e irreversível.</span>
+                </div>
+              </div>
+
+              <p v-if="mensagemPermissao" class="delete-error-note">
+                ⚠️ {{ mensagemPermissao }}
+              </p>
+
+              <div class="delete-modal-actions">
+                <button 
+                  class="btn-cancel-delete" 
+                  @click="cancelarExclusao" 
+                  :disabled="excluindoSala"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  class="btn-confirm-delete" 
+                  @click="executarExclusaoSala" 
+                  :disabled="excluindoSala"
+                >
+                  <span v-if="excluindoSala" class="btn-spinner-delete"></span>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="trash-action-svg">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>{{ excluindoSala ? 'Excluindo...' : 'Sim, Excluir Sala' }}</span>
+                </button>
+              </div>
+            </template>
+
           </div>
         </div>
       </Transition>
@@ -425,9 +420,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { database } from '../../firebase' 
-import { ref as dbRef, get, set, remove, update } from 'firebase/database'
+import { ref as dbRef, get, set, remove, update, query, orderByChild, equalTo, onValue } from 'firebase/database'
+import { isSalaAtiva, getSituacaoLabel } from '../../utils/salaUtils'
+
+const router = useRouter()
 
 const props = defineProps({
   userData: { type: Object, required: true }
@@ -451,6 +450,49 @@ const selectedActiveOculos = ref(null)
 const salvandoAtivos = ref(false)
 const mensagemAtivos = ref('')
 const tipoMensagem = ref('')
+const filtroParticipante = ref('')
+const menuOculosAberto = ref(false)
+const dropdownOculosRef = ref(null)
+
+const toggleMenuOculos = () => {
+  if (salvandoAtivos.value || isSalaAtiva(salaSelecionada.value)) return
+  menuOculosAberto.value = !menuOculosAberto.value
+}
+
+const selecionarOculos = (oculosId) => {
+  if (salvandoAtivos.value || isSalaAtiva(salaSelecionada.value)) return
+  if (oculosId && isOculosEmOutraSalaAtiva(oculosId)) return
+  selectedActiveOculos.value = oculosId
+  menuOculosAberto.value = false
+}
+
+const handleClickForaOculos = (e) => {
+  if (dropdownOculosRef.value && !dropdownOculosRef.value.contains(e.target)) {
+    menuOculosAberto.value = false
+  }
+}
+
+const facilitadorNome = computed(() => props.userData?.nome || 'Facilitador')
+
+const getShapeName = (shape) => {
+  if (shape === 1) return 'Semicírculo'
+  if (shape === 2) return 'Circular'
+  return 'Retangular'
+}
+
+const participantesFiltrados = computed(() => {
+  if (!filtroParticipante.value.trim()) return participantesSala.value
+  const q = filtroParticipante.value.toLowerCase()
+  return participantesSala.value.filter(p => 
+    (p.nome && p.nome.toLowerCase().includes(q)) ||
+    (p.email && p.email.toLowerCase().includes(q))
+  )
+})
+
+const selectedOculosObj = computed(() => {
+  if (!selectedActiveOculos.value) return null
+  return oculosDisponiveis.value.find(o => o.id === selectedActiveOculos.value) || null
+})
 
 // Edit state
 const editandoNome = ref(false)
@@ -463,8 +505,10 @@ const loadingAction = ref(false)
 
 const initials = computed(() => {
   const nome = props.userData.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nomes = String(nome).trim().split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
@@ -490,27 +534,54 @@ const fetchGrupos = async () => {
   }
 }
 
-const fetchSalasVR = async () => {
+let unsubSalasVR = null
+
+const fetchSalasVR = () => {
   try {
-    const salasRef = dbRef(database, 'classroom_configs')
-    const salasSnap = await get(salasRef)
-    if (salasSnap.exists()) {
-      const salasData = salasSnap.val()
-      minhasSalas.value = Object.keys(salasData)
-        .map(key => ({ id: key, ...salasData[key] }))
-        .filter(s => s.facilitadorId === props.userData.id)
-        .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))
-    } else {
-      minhasSalas.value = []
+    const qSalas = query(dbRef(database, 'classroom_configs'), orderByChild('facilitadorId'), equalTo(props.userData.id))
+    
+    if (unsubSalasVR) {
+      unsubSalasVR()
+      unsubSalasVR = null
     }
+
+    unsubSalasVR = onValue(qSalas, (salasSnap) => {
+      if (salasSnap.exists()) {
+        const salasData = salasSnap.val()
+        minhasSalas.value = Object.keys(salasData)
+          .map(key => ({ id: key, ...salasData[key] }))
+          .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))
+
+        if (salaSelecionada.value) {
+          const updated = minhasSalas.value.find(s => s.id === salaSelecionada.value.id)
+          if (updated) {
+            salaSelecionada.value = { ...updated }
+          }
+        }
+      } else {
+        minhasSalas.value = []
+      }
+      loadingSalas.value = false
+    }, (error) => {
+      console.error("Erro ao buscar salas VR:", error)
+      loadingSalas.value = false
+    })
   } catch (error) {
     console.error("Erro ao buscar salas VR:", error)
-  } finally {
     loadingSalas.value = false
   }
 }
 
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickForaOculos)
+  if (unsubSalasVR) {
+    unsubSalasVR()
+    unsubSalasVR = null
+  }
+})
+
 onMounted(async () => {
+  document.addEventListener('click', handleClickForaOculos)
   if (props.userData.instituicaoId) {
     try {
       const instRef = dbRef(database, `instituicoes/${props.userData.instituicaoId}`)
@@ -565,97 +636,82 @@ const formatDataCurta = (isoString) => {
 }
 
 // ----- Detalhes da Sala VR -----
-const abrirDetalhesSala = async (sala) => {
-  salaSelecionada.value = { ...sala }
-  selectedActiveParticipant.value = sala.activeParticipantId || null
-  selectedActiveOculos.value = sala.activeHeadsetId || null
-  mensagemAtivos.value = ''
-  
-  loadingDetalhes.value = true
-  participantesSala.value = []
-  oculosDisponiveis.value = []
-
-  try {
-    // 1. Buscar Óculos da Instituição
-    const oculosRef = dbRef(database, `instituicoes/${props.userData.instituicaoId}/oculos`)
-    const oculosSnap = await get(oculosRef)
-    if (oculosSnap.exists()) {
-      const dataO = oculosSnap.val()
-      oculosDisponiveis.value = Object.keys(dataO).map(k => ({ id: k, ...dataO[k] }))
-    }
-
-    // 2. Buscar Participantes/Aluno
-    if (sala.targetType === 'grupo') {
-      const grupoRef = dbRef(database, `instituicoes/${props.userData.instituicaoId}/grupos/${sala.targetId}/participantes`)
-      const grupoSnap = await get(grupoRef)
-      if (grupoSnap.exists()) {
-        participantesSala.value = grupoSnap.val() || []
-      }
-    } else if (sala.targetType === 'aluno') {
-      const userRef = dbRef(database, `usuarios/${sala.targetId}`)
-      const userSnap = await get(userRef)
-      if (userSnap.exists()) {
-        const uData = userSnap.val()
-        participantesSala.value = [{ id: sala.targetId, nome: uData.nome, email: uData.email }]
-        selectedActiveParticipant.value = sala.targetId
-      }
-    }
-  } catch (error) {
-    console.error("Erro ao carregar dependências da sala:", error)
-  } finally {
-    loadingDetalhes.value = false
+const abrirDetalhesSala = (sala) => {
+  if (sala && sala.id) {
+    router.push(`/configurar-sala/${sala.id}`)
   }
 }
 
-const fecharDetalhesSala = () => {
-  salaSelecionada.value = null
-}
+// ----- Exclusão de Sala VR (Facilitador / Facilitador Plus) -----
+const excluindoSala = ref(false)
+const salaParaExcluir = ref(null)
+const mensagemPermissao = ref('')
 
-const salvarConfiguracoesAtivas = async () => {
-  if (salaSelecionada.value.targetType === 'grupo' && !selectedActiveParticipant.value) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Selecione o participante que estará ativo.'
+const confirmarExclusaoSala = (sala) => {
+  if (!sala || !sala.id) return
+
+  // Validação: não permitir excluir sala ativa
+  if (isSalaAtiva(sala)) {
+    mensagemPermissao.value = "Esta sala está com status \"Ativa\" no momento. Finalize a atividade VR antes de tentar excluí-la."
+    salaParaExcluir.value = { ...sala, semPermissao: true }
     return
   }
 
-  salvandoAtivos.value = true
-  mensagemAtivos.value = ''
+  // Validação: apenas o facilitador que criou a sala pode excluí-la
+  const idsAutorizados = [
+    props.userData.id,
+    props.userData.uid,
+    props.userData.authUid,
+    props.userData.idCurto
+  ].filter(Boolean)
 
+  if (sala.facilitadorId && !idsAutorizados.includes(sala.facilitadorId)) {
+    mensagemPermissao.value = "Você só tem permissão para excluir as salas que você mesmo criou."
+    salaParaExcluir.value = { ...sala, semPermissao: true }
+    return
+  }
+
+  mensagemPermissao.value = ''
+  salaParaExcluir.value = { ...sala, semPermissao: false }
+}
+
+const cancelarExclusao = () => {
+  salaParaExcluir.value = null
+  mensagemPermissao.value = ''
+}
+
+const executarExclusaoSala = async () => {
+  if (!salaParaExcluir.value?.id) return
+  const salaId = salaParaExcluir.value.id
+
+  if (isSalaAtiva(salaParaExcluir.value)) {
+    mensagemPermissao.value = "Esta sala está com status \"Ativa\" no momento e não pode ser excluída."
+    return
+  }
+
+  excluindoSala.value = true
   try {
-    const updates = {}
-    let mensagemExtra = ''
-    
-    // Garante que o óculos selecionado não está ativo em nenhuma outra sala globalmente
-    if (selectedActiveOculos.value) {
-      const todasSalasRef = dbRef(database, 'classroom_configs')
-      const todasSnap = await get(todasSalasRef)
-      if (todasSnap.exists()) {
-        const todas = todasSnap.val()
-        for (const sId in todas) {
-          if (sId !== salaSelecionada.value.id && todas[sId].activeHeadsetId === selectedActiveOculos.value) {
-            updates[`classroom_configs/${sId}/activeHeadsetId`] = null
-            mensagemExtra = ` (Óculos movido de outra sala)`
-          }
-        }
-      }
+    // Verificação de última hora no banco
+    const freshSnap = await get(dbRef(database, `classroom_configs/${salaId}`))
+    if (freshSnap.exists() && isSalaAtiva(freshSnap.val())) {
+      mensagemPermissao.value = "Esta sala acabou de ser ativada e não pode ser excluída."
+      return
     }
 
-    updates[`classroom_configs/${salaSelecionada.value.id}/activeParticipantId`] = selectedActiveParticipant.value
-    updates[`classroom_configs/${salaSelecionada.value.id}/activeHeadsetId`] = selectedActiveOculos.value || null
+    const salaRef = dbRef(database, `classroom_configs/${salaId}`)
+    await remove(salaRef)
 
-    await update(dbRef(database), updates)
+    if (salaSelecionada.value?.id === salaId) {
+      fecharDetalhesSala()
+    }
 
-    tipoMensagem.value = 'success'
-    mensagemAtivos.value = 'Configuração da sessão salva com sucesso!' + mensagemExtra
-    
-    await fetchSalasVR()
+    minhasSalas.value = minhasSalas.value.filter(s => s.id !== salaId)
+    cancelarExclusao()
   } catch (error) {
-    console.error("Erro ao salvar configurações ativas:", error)
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Erro ao salvar. Tente novamente.'
+    console.error("Erro ao excluir sala VR:", error)
+    mensagemPermissao.value = "Ocorreu um erro ao excluir a sala. Tente novamente."
   } finally {
-    salvandoAtivos.value = false
-    setTimeout(() => { mensagemAtivos.value = '' }, 5000)
+    excluindoSala.value = false
   }
 }
 
@@ -691,17 +747,19 @@ const salvarNomeGrupo = async () => {
 const fetchMembrosDisponiveis = async () => {
   loadingMembros.value = true
   try {
-    const usersRef = dbRef(database, 'usuarios')
-    const snapshot = await get(usersRef)
+    if (!props.userData.instituicaoId) return
+    const qUsers = query(dbRef(database, 'usuarios'), orderByChild('instituicaoId'), equalTo(props.userData.instituicaoId))
+    const snapshot = await get(qUsers)
     if (snapshot.exists()) {
       const todosUsuarios = snapshot.val()
-      const participantesIds = grupoSelecionado.value.participantes.map(p => p.id)
+      const participantesIds = (grupoSelecionado.value.participantes || []).map(p => p.id)
       
       membrosDisponiveis.value = Object.keys(todosUsuarios)
         .map(key => ({ id: key, ...todosUsuarios[key] }))
-        .filter(u => u.instituicaoId === props.userData.instituicaoId)
         .filter(u => !participantesIds.includes(u.id))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+    } else {
+      membrosDisponiveis.value = []
     }
   } catch (error) {
     console.error("Erro ao buscar membros:", error)
@@ -837,16 +895,23 @@ const confirmarExclusaoGrupo = async () => {
 .user-avatar-glass {
   width: 72px;
   height: 72px;
+  min-width: 72px;
+  min-height: 72px;
   border-radius: 20px;
   background: linear-gradient(135deg, #10b981 0%, #0071e3 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  text-align: center;
+  padding: 4px;
+  letter-spacing: -0.5px;
+  line-height: 1;
 }
 
 .user-avatar-glass.plus-avatar {
@@ -960,6 +1025,7 @@ const confirmarExclusaoGrupo = async () => {
   text-decoration: none;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  min-width: 0;
 }
 
 .quick-btn:hover {
@@ -970,10 +1036,10 @@ const confirmarExclusaoGrupo = async () => {
 .quick-btn.primary:hover { border-color: rgba(0, 113, 227, 0.4); background: #eff6ff; }
 .quick-btn.secondary:hover { border-color: rgba(16, 185, 129, 0.4); background: #ecfdf5; }
 
-.q-icon { font-size: 1.5rem; }
-.q-text { display: flex; flex-direction: column; text-align: left; }
-.q-title { font-size: 0.92rem; font-weight: 700; color: #0f172a; }
-.q-desc { font-size: 0.76rem; color: #64748b; }
+.q-icon { font-size: 1.5rem; flex-shrink: 0; }
+.q-text { display: flex; flex-direction: column; text-align: left; min-width: 0; overflow: hidden; }
+.q-title { font-size: 0.92rem; font-weight: 700; color: #0f172a; word-break: break-word; line-height: 1.25; }
+.q-desc { font-size: 0.76rem; color: #64748b; word-break: break-word; line-height: 1.25; }
 
 /* Stats Row */
 .stats-row {
@@ -1154,6 +1220,179 @@ const confirmarExclusaoGrupo = async () => {
   border: 1px solid #bfdbfe;
   padding: 4px 10px;
   border-radius: 9999px;
+}
+
+.tags-left-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.situacao-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.2px;
+  transition: all 0.2s ease;
+}
+
+.situacao-badge.situacao-ativa {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.situacao-badge.situacao-inativa {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.situacao-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.situacao-ativa .situacao-dot {
+  background: #16a34a;
+  box-shadow: 0 0 6px #16a34a;
+  animation: pulseDot 1.8s infinite;
+}
+
+.situacao-inativa .situacao-dot {
+  background: #94a3b8;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.btn-delete-disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(1);
+}
+
+.session-live-pulse-badge.badge-sala-ativa {
+  background: rgba(220, 252, 231, 0.9);
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.session-live-pulse-badge.badge-sala-inativa {
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.idle-beacon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  display: inline-block;
+}
+
+.sala-ativa-lock-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: #991b1b;
+}
+
+.lock-alert-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.lock-alert-text strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  color: #991b1b;
+}
+
+.lock-alert-text p {
+  font-size: 0.80rem;
+  margin: 0;
+  line-height: 1.4;
+  color: #b91c1c;
+}
+
+.module-locked {
+  opacity: 0.9;
+}
+
+.field-disabled-locked {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+}
+
+.card-disabled-locked {
+  cursor: not-allowed !important;
+  opacity: 0.65;
+}
+
+.btn-disabled-locked {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+.card-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-card-delete-sala {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.btn-card-delete-sala:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
+  transform: scale(1.08);
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.2);
+}
+
+.btn-card-delete-sala:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trash-icon-svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
 }
 
 .target-tag {
@@ -1666,174 +1905,1517 @@ const confirmarExclusaoGrupo = async () => {
   padding: 20px;
 }
 
-.modal-glass-container {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(36px) saturate(200%);
-  -webkit-backdrop-filter: blur(36px) saturate(200%);
-  width: 100%;
-  max-width: 540px;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2);
+/* ============================================================ */
+/* NOVO MODAL DE CONFIGURAÇÃO DE SESSÃO VR (HUD TECNOLÓGICO & ZERO CORTE) */
+/* ============================================================ */
+.session-modal-container {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  width: 94vw;
+  max-width: 680px;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  box-shadow: 
+    0 24px 60px -12px rgba(15, 23, 42, 0.25),
+    0 0 0 1px rgba(0, 113, 227, 0.1),
+    0 10px 30px -5px rgba(0, 113, 227, 0.15);
   overflow: hidden;
-  max-height: 90vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
+  animation: modalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-header {
-  padding: 22px 28px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.session-modal-header {
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  padding: 24px 26px 20px 26px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.modal-title-wrapper { display: flex; flex-direction: column; gap: 2px; }
-.modal-tag { font-size: 0.7rem; font-weight: 800; color: #0071e3; letter-spacing: 0.8px; }
-.modal-title { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; letter-spacing: -0.4px; }
+.header-top-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 
-.close-btn {
-  background: rgba(241, 245, 249, 0.8);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  font-size: 1.5rem;
-  color: #64748b;
-  cursor: pointer;
+.header-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session-kicker-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #0071e3;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  background: rgba(0, 113, 227, 0.08);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 113, 227, 0.2);
+}
+
+.vr-tag-icon {
+  font-size: 0.85rem;
+}
+
+.session-target-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+}
+
+.session-live-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
+.pulse-beacon {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  width: 38px;
-  height: 38px;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: beaconPulse 2s infinite;
+}
+
+@keyframes beaconPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.header-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.session-room-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.btn-close-session {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.btn-close-session:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+  transform: rotate(90deg);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-close-session svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* HUD Telemetry Cards (Zero Truncamento!) */
+.session-telemetry-hud {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.telemetry-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease;
 }
 
-.close-btn:hover { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
-
-.modal-body { padding: 24px 28px; overflow-y: auto; }
-
-.vr-specs-glass {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  background: rgba(248, 250, 252, 0.8);
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+.telemetry-card:hover {
+  border-color: rgba(0, 113, 227, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.06);
+  transform: translateY(-1px);
 }
 
-.spec-item { display: flex; flex-direction: column; gap: 2px; }
-.spec-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-.spec-value { font-size: 0.88rem; font-weight: 600; color: #0f172a; }
+.telemetry-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(0, 113, 227, 0.08);
+  border: 1px solid rgba(0, 113, 227, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0071e3;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 
-.divider-subtle { height: 1px; background: rgba(226, 232, 240, 0.8); margin: 20px 0; }
-.section-subtitle { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0 0 2px 0; }
-.subtitle-hint { font-size: 0.82rem; color: #64748b; margin: 0 0 18px 0; }
+.telemetry-svg {
+  width: 16px;
+  height: 16px;
+}
 
-.active-config-form { display: flex; flex-direction: column; gap: 18px; }
-.form-group-glass { display: flex; flex-direction: column; gap: 8px; }
-.form-label { display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 700; color: #334155; }
-.label-icon { font-size: 1.1rem; }
+.telemetry-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
 
-.glass-select {
+.telemetry-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.telemetry-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  text-overflow: clip;
+}
+
+.telemetry-value.highlight {
+  color: #0071e3;
+  font-weight: 700;
+}
+
+/* Modal Body */
+.session-modal-body {
+  padding: 24px 26px 26px 26px;
+  overflow-y: auto;
+  max-height: calc(92vh - 180px);
+}
+
+.session-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 50px 20px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.session-form-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Step Module */
+.session-step-module {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+  transition: border-color 0.2s ease;
+}
+
+.session-step-module:focus-within {
+  border-color: rgba(0, 113, 227, 0.35);
+}
+
+.module-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.module-number-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 113, 227, 0.3);
+}
+
+.module-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.module-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.module-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.module-subheading {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.hardware-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.hardware-status-badge.connected {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.hardware-status-badge.pending {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: beaconPulse 2s infinite;
+}
+
+.idle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.count-tech-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #0071e3;
+  border: 1px solid #bfdbfe;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+/* Custom Óculos Dropdown */
+.custom-oculos-dropdown-container {
+  position: relative;
   width: 100%;
-  padding: 12px 14px;
-  border: 1.5px solid rgba(203, 213, 225, 0.8);
+}
+
+.custom-oculos-trigger {
+  width: 100%;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 10px 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  text-align: left;
+  user-select: none;
+}
+
+.custom-oculos-trigger:hover:not(.is-disabled) {
+  border-color: #0071e3;
+  background: #f8fafc;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.08);
+}
+
+.custom-oculos-dropdown-container.is-open .custom-oculos-trigger {
+  border-color: #0071e3;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14);
+}
+
+.custom-oculos-trigger.is-disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.trigger-left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0;
+  flex: 1;
+}
+
+.headset-icon-box {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
   border-radius: 12px;
+  background: rgba(0, 113, 227, 0.08);
+  border: 1px solid rgba(0, 113, 227, 0.15);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #0071e3;
+  font-size: 1.3rem;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  transition: all 0.2s ease;
+}
+
+.headset-icon-box.has-selection {
+  background: linear-gradient(135deg, rgba(0, 113, 227, 0.15), rgba(16, 185, 129, 0.15));
+  border-color: #93c5fd;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.12);
+}
+
+.vr-headset-svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.trigger-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.selected-oculos-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selected-oculos-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.placeholder-oculos-title {
   font-size: 0.92rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.9);
+  color: #64748b;
+}
+
+.placeholder-oculos-sub {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.trigger-chevron {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  color: #64748b;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0 !important;
+}
+
+.trigger-chevron svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.trigger-chevron.is-flipped {
+  transform: rotate(180deg);
+  color: #0071e3;
+}
+
+/* Dropdown Menu Glass */
+.custom-oculos-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1.5px solid rgba(0, 113, 227, 0.2);
+  border-radius: 18px;
+  padding: 10px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.12), 0 4px 16px rgba(0, 113, 227, 0.08);
+}
+
+.menu-header-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 8px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
+}
+
+.count-badge-sub {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.menu-items-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.menu-items-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.menu-items-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+/* Oculos Menu Item */
+.oculos-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: 1px solid transparent;
+  gap: 12px;
+}
+
+.oculos-menu-item:hover:not(.is-blocked) {
+  background: rgba(0, 113, 227, 0.05);
+  border-color: rgba(0, 113, 227, 0.15);
+  transform: translateX(2px);
+}
+
+.oculos-menu-item.is-active {
+  background: rgba(0, 113, 227, 0.08);
+  border-color: #93c5fd;
+}
+
+.oculos-menu-item.is-blocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.item-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.item-icon-box.vr-icon.is-active {
+  background: linear-gradient(135deg, #0071e3, #3b82f6);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
+}
+
+.item-icon-box.none-icon {
+  color: #94a3b8;
+}
+
+.item-text-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-title {
+  font-size: 0.92rem;
+  font-weight: 700;
   color: #0f172a;
-  outline: none;
+}
+
+.badge-numero-oculos {
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.item-desc {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.item-status-warning {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.item-status-active {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #0071e3;
+}
+
+.item-status-avail {
+  font-size: 0.74rem;
+  color: #10b981;
+  font-weight: 500;
+}
+
+.item-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0071e3;
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-selected-pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: #0071e3;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
+}
+
+.badge-locked-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.action-arrow-sub {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0071e3;
+  opacity: 0;
+  transform: translateX(-4px);
   transition: all 0.2s ease;
 }
 
-.glass-select:focus {
-  border-color: #0071e3;
-  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
+.oculos-menu-item:hover:not(.is-blocked) .action-arrow-sub {
+  opacity: 1;
+  transform: translateX(0);
 }
 
-.participants-scroll-list {
+.empty-dropdown-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: #64748b;
+  font-size: 0.84rem;
+  justify-content: center;
+}
+
+/* Dropdown Animation */
+.dropdown-scale-enter-active,
+.dropdown-scale-leave-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-scale-enter-from,
+.dropdown-scale-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+}
+
+/* Active Headset Preview */
+.active-headset-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(0, 113, 227, 0.06) 0%, rgba(2, 132, 199, 0.04) 100%);
+  border: 1.5px solid rgba(0, 113, 227, 0.25);
+  border-radius: 14px;
+  padding: 12px 16px;
+  overflow: hidden;
+  animation: modalPop 0.2s ease-out;
+}
+
+.preview-glow-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #0071e3, #38bdf8);
+}
+
+.hw-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.preview-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-model {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0071e3;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.preview-sub {
+  font-size: 0.76rem;
+  color: #475569;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.preview-state-tag {
+  flex-shrink: 0;
+}
+
+.tag-signal {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: #059669;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+}
+
+.empty-warn-tech {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #d97706;
+  margin: 2px 0 0 0;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.warn-svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Digital Student VR Pass (Aluno Individual) */
+.digital-student-pass {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  border: 1.5px solid #bfdbfe;
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.08);
+  overflow: hidden;
+}
+
+.pass-accent-light {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #0071e3, #60a5fa);
+}
+
+.pass-avatar-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.28);
+  border: 2px solid #ffffff;
+}
+
+.pass-details-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pass-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pass-role-micro {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #0071e3;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.pass-chip-verified {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #059669;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #a7f3d0;
+}
+
+.pass-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.pass-email {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Group Selection Zone */
+.group-selection-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tech-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+
+.tech-search-bar:focus-within {
+  background: #ffffff;
+  border-color: #0071e3;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+}
+
+.search-svg {
+  width: 17px;
+  height: 17px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.tech-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.clear-search-btn {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.clear-search-btn:hover {
+  color: #ef4444;
+}
+
+.student-cards-scrollable {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 200px;
+  max-height: 240px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
-.participant-card-option {
+.student-cards-scrollable::-webkit-scrollbar {
+  width: 5px;
+}
+
+.student-cards-scrollable::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.student-cards-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.student-hud-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.student-hud-card:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateX(3px);
+}
+
+.student-hud-card.selected-active {
+  background: #eff6ff;
+  border-color: #0071e3;
+  box-shadow: 0 4px 16px rgba(0, 113, 227, 0.14);
+  transform: translateX(3px);
+}
+
+.st-card-profile {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border: 1.5px solid rgba(226, 232, 240, 0.9);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  min-width: 0;
+  flex: 1;
 }
 
-.participant-card-option:hover { background: #f8fafc; border-color: #cbd5e1; }
-.participant-card-option.is-selected { background: #eff6ff; border-color: #0071e3; box-shadow: 0 4px 12px rgba(0, 113, 227, 0.1); }
-.participant-card-option input[type="radio"] { accent-color: #0071e3; width: 16px; height: 16px; }
-
-.p-option-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0071e3, #10b981);
-  color: white;
+.st-hud-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #0071e3 0%, #10b981 100%);
+  color: #ffffff;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.p-option-info { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-.p-option-name { font-size: 0.9rem; font-weight: 700; color: #0f172a; }
-.p-option-email { font-size: 0.76rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-option-tag { font-size: 0.68rem; font-weight: 800; color: #059669; background: #ecfdf5; padding: 3px 8px; border-radius: 6px; }
+.student-hud-card.selected-active .st-hud-avatar {
+  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35);
+}
 
-.empty-hint { font-size: 0.8rem; color: #ef4444; font-style: italic; margin: 4px 0 0 0; }
+.st-hud-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
 
-.btn-save-session {
+.st-hud-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.st-hud-email {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.st-hud-action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.inactive-radio-circle {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 50%;
+  display: block;
+}
+
+.check-mark-tech {
+  font-size: 0.74rem;
+  font-weight: 800;
+  background: #0071e3;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
+}
+
+.empty-search-alert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 30px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.empty-search-svg {
+  width: 28px;
+  height: 28px;
+  stroke: #cbd5e1;
+}
+
+/* Feedback Box */
+.feedback-toast-box {
+  margin-top: 2px;
+}
+
+.feedback-toast-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.feedback-toast-card.success {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.feedback-toast-card.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+/* Confirm Button (Tecnológico & Institucional) */
+.btn-confirm-session-tech {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 14px;
-  border-radius: 14px;
+  padding: 15px 24px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
-  color: white;
-  border: none;
-  font-size: 0.95rem;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0, 113, 227, 0.25);
-  transition: all 0.2s ease;
-  margin-top: 8px;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 10px 28px -4px rgba(0, 113, 227, 0.42);
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-save-session:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0, 113, 227, 0.35); }
-.btn-save-session:disabled { background: #94a3b8; box-shadow: none; cursor: not-allowed; }
+.btn-confirm-session-tech:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 14px 34px -4px rgba(0, 113, 227, 0.52);
+}
 
-.btn-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+.btn-confirm-session-tech:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-confirm-session-tech:disabled {
+  background: #94a3b8;
+  color: #ffffff !important;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.btn-confirm-session-tech .btn-confirm-text {
+  color: #ffffff !important;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.btn-confirm-session-tech .btn-action-svg {
+  width: 20px;
+  height: 20px;
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+  flex-shrink: 0;
+}
+
+.btn-spinner-tech {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
   border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-.feedback-toast { margin-top: 4px; }
-.feedback-text { padding: 10px 14px; border-radius: 10px; font-size: 0.86rem; font-weight: 600; text-align: center; }
-.feedback-text.success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.feedback-text.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+/* Zona de Perigo Tecnológica */
+.danger-zone-box {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: #fff5f5;
+  border: 1.5px dashed #fca5a5;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.danger-zone-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  flex: 1;
+  min-width: 200px;
+}
+
+.danger-zone-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.danger-zone-desc {
+  font-size: 0.78rem;
+  color: #7f1d1d;
+  line-height: 1.35;
+}
+
+.btn-delete-room-full {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 11px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
+}
+
+.btn-delete-room-full:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.35);
+}
+
+.btn-delete-room-full:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-delete-room-full svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Modal de Confirmação de Exclusão Elegante (Substitui Alert Feio) */
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200000 !important;
+  padding: 20px;
+}
+
+.delete-modal-box {
+  background: #ffffff;
+  border-radius: 22px;
+  max-width: 440px;
+  width: 100%;
+  padding: 28px 24px 24px 24px;
+  box-shadow: 
+    0 25px 60px -15px rgba(220, 38, 38, 0.25),
+    0 0 0 1px rgba(239, 68, 68, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.delete-icon-wrapper {
+  margin-bottom: 2px;
+}
+
+.delete-icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #fee2e2;
+  border: 2px solid #fca5a5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+.delete-warn-svg {
+  width: 28px;
+  height: 28px;
+}
+
+.delete-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+}
+
+.delete-modal-subdesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.delete-modal-room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  padding: 8px 16px;
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+.room-badge-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.room-name-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #b91c1c;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.delete-modal-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  width: 100%;
+}
+
+.delete-point-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.bullet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.bullet-dot.red {
+  background: #ef4444;
+}
+
+.delete-point-row.alert {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.delete-error-note {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.delete-modal-actions.single-action {
+  justify-content: center;
+}
+
+.btn-cancel-delete {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-delete:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-confirm-delete {
+  flex: 1.3;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-confirm-delete:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
+}
+
+.btn-confirm-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trash-action-svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-spinner-delete {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
 
 /* Transitions */
 .glass-slide-enter-active, .glass-slide-leave-active { transition: opacity 0.3s ease; }
@@ -1844,5 +3426,34 @@ const confirmarExclusaoGrupo = async () => {
 .glass-slide-leave-to :deep(.side-panel-glass) { transform: translateX(100%); }
 
 .glass-modal-enter-active, .glass-modal-leave-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.glass-modal-enter-from, .glass-modal-leave-to { opacity: 0; transform: scale(0.96) translateY(10px); }
+.glass-modal-enter-from, .glass-modal-leave-to { opacity: 0; transform: scale(0.96) translateY(12px); }
+</style>
+
+<style>
+/* Global safety rules for teleported VR dropdown elements */
+.custom-oculos-trigger .vr-headset-svg {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.custom-oculos-trigger .trigger-chevron svg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.custom-oculos-trigger .headset-icon-box {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  flex-shrink: 0 !important;
+}
 </style>

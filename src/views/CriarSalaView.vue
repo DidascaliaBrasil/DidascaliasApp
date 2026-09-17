@@ -26,7 +26,7 @@
         <!-- Hero Header Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -78,7 +78,7 @@
               </label>
               <select v-model="form.targetId" class="glass-input-field" required>
                 <option value="" disabled>Escolha um grupo disponível...</option>
-                <option v-for="grupo in gruposDisponiveis" :key="grupo.id" :value="grupo.id">
+                <option v-for="grupo in gruposDisponiveis" :key="grupo.id" :value="grupo.id" class="notranslate" translate="no">
                   {{ grupo.nome }} ({{ grupo.participantes ? grupo.participantes.length : 0 }} participantes)
                 </option>
               </select>
@@ -93,7 +93,7 @@
               </label>
               <select v-model="form.targetId" class="glass-input-field" required>
                 <option value="" disabled>Escolha um aluno cadastrado...</option>
-                <option v-for="aluno in alunosDisponiveis" :key="aluno.id" :value="aluno.id">
+                <option v-for="aluno in alunosDisponiveis" :key="aluno.id" :value="aluno.id" class="notranslate" translate="no">
                   {{ aluno.nome }} ({{ aluno.email }})
                 </option>
               </select>
@@ -219,13 +219,14 @@
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { ref as dbRef, get, push, set } from 'firebase/database'
+import { database } from '../firebase'
+import { ref as dbRef, get, push, set, query, orderByChild, equalTo } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
 
 import MenuLateral from '../components/generic/MenuLateral.vue' 
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
 const isSaving = ref(false)
 const userData = ref({})
@@ -251,9 +252,11 @@ const form = reactive({
 })
 
 const initials = computed(() => {
-  const nome = userData.value.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nome = (userData.value.nome || '?').trim()
+  const nomes = nome.split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
@@ -263,85 +266,30 @@ const isFormValid = computed(() => {
   return true
 })
 
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const shortId = user.uid.substring(0, 8).toUpperCase()
-        const fullId = user.uid
-        
-        let dataEncontrada = null
-        let idUsado = null
-        let tipoConta = null
+onMounted(async () => {
+  try {
+    const profile = await authStore.getUserProfile()
+    if (profile && profile.tipo !== 'indefinido') {
+      userData.value = profile
+      const t = String(profile.tipo || '').toLowerCase()
+      const tc = String(profile.tipoCadastro || '').toLowerCase()
+      const isInst = t.includes('institui') || tc.includes('institui')
+      const isPlus = profile.FacilitadorPlus === true || profile.FacilitadorPlus === 'true'
 
-        const paths = [
-          { ref: `usuarios/${shortId}`, typeFallback: null },
-          { ref: `usuarios/${fullId}`, typeFallback: null },
-          { ref: `instituicoes/${shortId}`, typeFallback: 'Instituicao' },
-          { ref: `instituicoes/${fullId}`, typeFallback: 'Instituicao' }
-        ]
-
-        for (const path of paths) {
-          const snap = await get(dbRef(database, path.ref))
-          if (snap.exists()) {
-            dataEncontrada = snap.val()
-            idUsado = path.ref.split('/')[1] 
-            tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-            break
-          }
-        }
-
-        if (!dataEncontrada) {
-          const instSnap = await get(dbRef(database, 'instituicoes'))
-          if (instSnap.exists()) {
-            const instituicoes = instSnap.val()
-            for (const key in instituicoes) {
-              if (instituicoes[key].email === user.email) {
-                dataEncontrada = instituicoes[key]
-                idUsado = key
-                tipoConta = 'Instituicao'
-                break
-              }
-            }
-          }
-        }
-
-        if (!dataEncontrada) {
-          const usersSnap = await get(dbRef(database, 'usuarios'))
-          if (usersSnap.exists()) {
-            const usuarios = usersSnap.val()
-            for (const key in usuarios) {
-              if (usuarios[key].email === user.email) {
-                dataEncontrada = usuarios[key]
-                idUsado = key
-                tipoConta = usuarios[key].tipoCadastro || usuarios[key].tipo
-                break
-              }
-            }
-          }
-        }
-
-        if (dataEncontrada) {
-          userData.value = {
-            email: user.email, 
-            ...dataEncontrada,
-            id: idUsado,
-            tipo: tipoConta
-          }
-          
-          await fetchDependencias(dataEncontrada.instituicaoId, idUsado)
-        } else {
-          router.push('/')
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error)
-      } finally {
-        isLoading.value = false
+      if (isInst && !isPlus) {
+        router.push('/home')
+        return
       }
+
+      await fetchDependencias(profile.instituicaoId || profile.id, profile.id)
     } else {
       router.push('/')
     }
-  })
+  } catch (error) {
+    console.error("Erro ao buscar dados:", error)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 const fetchDependencias = async (instituicaoId, facilitadorId) => {
@@ -358,15 +306,17 @@ const fetchDependencias = async (instituicaoId, facilitadorId) => {
         .filter(g => g.facilitadorId === facilitadorId)
     }
 
-    // 2. Buscar Usuários/Alunos da Instituição
-    const usersRef = dbRef(database, 'usuarios')
-    const usersSnap = await get(usersRef)
+    // 2. Buscar Usuários/Alunos da Instituição via Query Indexada (JAMAIS baixa todos os usuários)
+    const qUsers = query(dbRef(database, 'usuarios'), orderByChild('instituicaoId'), equalTo(instituicaoId))
+    const usersSnap = await get(qUsers)
     if (usersSnap.exists()) {
       const todosUsuarios = usersSnap.val()
       alunosDisponiveis.value = Object.keys(todosUsuarios)
         .map(key => ({ id: key, ...todosUsuarios[key] }))
-        .filter(u => u.instituicaoId === instituicaoId && (u.tipoCadastro === 'Usuario' || u.tipo === 'Usuario'))
+        .filter(u => u.tipoCadastro === 'Usuario' || u.tipo === 'Usuario')
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+    } else {
+      alunosDisponiveis.value = []
     }
   } catch (error) {
     console.error("Erro ao buscar dependências:", error)
@@ -375,6 +325,17 @@ const fetchDependencias = async (instituicaoId, facilitadorId) => {
 
 const salvarConfiguracao = async () => {
   if (!isFormValid.value) return
+
+  const t = String(userData.value.tipo || '').toLowerCase()
+  const tc = String(userData.value.tipoCadastro || '').toLowerCase()
+  const isInst = t.includes('institui') || tc.includes('institui')
+  const isPlus = userData.value.FacilitadorPlus === true || userData.value.FacilitadorPlus === 'true'
+
+  if (isInst && !isPlus) {
+    feedbackType.value = 'error'
+    feedbackMsg.value = 'Sua instituição não possui permissão FacilitadorPlus para criar salas VR.'
+    return
+  }
   
   isSaving.value = true
   feedbackMsg.value = ''
@@ -390,6 +351,9 @@ const salvarConfiguracao = async () => {
       instituicaoId: userData.value.instituicaoId,
       facilitadorId: userData.value.id,
       criadoEm: new Date().toISOString(),
+      situacao_atual: {
+        ativo: "nao"
+      },
       
       numBoys: form.numBoys,
       numGirls: form.numGirls,
@@ -457,10 +421,14 @@ const salvarConfiguracao = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .welcome-texts {

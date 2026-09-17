@@ -67,6 +67,12 @@ const router = createRouter({
       name: 'meus-resultados',
       component: () => import('../views/MeusResultadosUsuarioView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/configurar-sala/:id',
+      name: 'configurar-sala',
+      component: () => import('../views/ConfigurarSalaView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

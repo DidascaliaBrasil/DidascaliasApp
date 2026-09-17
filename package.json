@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "dev:web": "vite",
     "dev:electron": "vite --mode electron",
     "build:web": "vite build --mode web",

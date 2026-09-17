@@ -44,7 +44,7 @@
                   <span class="vr-icon">🥽</span>
                 </div>
                 <div class="device-title-info">
-                  <h3 class="device-model">{{ device.modelo || 'Óculos VR Desconhecido' }}</h3>
+                  <h3 class="device-model notranslate" translate="no">{{ device.modelo || 'Óculos VR Desconhecido' }}</h3>
                   <span class="device-status">Pendente de Aceite</span>
                 </div>
               </div>
@@ -52,7 +52,7 @@
               <div class="card-meta-glass">
                 <div class="info-row">
                   <span class="meta-label">ID do Dispositivo:</span>
-                  <span class="meta-value code-chip" :title="device.id">{{ device.id }}</span>
+                  <span class="meta-value code-chip notranslate" translate="no" :title="device.id">{{ device.id }}</span>
                 </div>
                 <div class="info-row">
                   <span class="meta-label">Solicitado em:</span>
@@ -173,9 +173,7 @@ const denyDevice = async (deviceId) => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.45);
   z-index: 99999;
   display: flex;
   justify-content: flex-end;
@@ -185,11 +183,9 @@ const denyDevice = async (deviceId) => {
   width: 480px;
   max-width: 100vw;
   height: 100%;
-  background: rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(36px) saturate(200%);
-  -webkit-backdrop-filter: blur(36px) saturate(200%);
-  border-left: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: -20px 0 60px rgba(15, 23, 42, 0.15);
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -15px 0 45px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
 }
@@ -199,8 +195,8 @@ const denyDevice = async (deviceId) => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 28px;
-  background: rgba(255, 255, 255, 0.7);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .logo-area {
@@ -234,8 +230,8 @@ const denyDevice = async (deviceId) => {
 }
 
 .btn-fechar-panel {
-  background: rgba(241, 245, 249, 0.8);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   color: #64748b;
   cursor: pointer;
   width: 36px;
@@ -274,8 +270,8 @@ const denyDevice = async (deviceId) => {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(254, 243, 199, 0.9);
-  border: 1px solid rgba(253, 230, 138, 0.9);
+  background: #fef3c7;
+  border: 1px solid #fde68a;
   color: #b45309;
   font-size: 0.74rem;
   font-weight: 700;
@@ -304,7 +300,7 @@ const denyDevice = async (deviceId) => {
   margin: 0;
 }
 
-/* Loading Glass */
+/* Loading State */
 .loading-state-glass {
   display: flex;
   flex-direction: column;
@@ -334,17 +330,18 @@ const denyDevice = async (deviceId) => {
 }
 
 .device-card-glass {
-  background: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
   border-radius: 20px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
   transition: all 0.25s ease;
 }
 
 .device-card-glass:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(0, 113, 227, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 113, 227, 0.08);
+  border-color: #cbd5e1;
 }
 
 .card-head {
@@ -358,7 +355,7 @@ const denyDevice = async (deviceId) => {
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  background: #eff6ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -385,10 +382,10 @@ const denyDevice = async (deviceId) => {
 }
 
 .card-meta-glass {
-  background: rgba(248, 250, 252, 0.85);
+  background: #f8fafc;
   border-radius: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid #e2e8f0;
   margin-bottom: 16px;
 }
 
@@ -434,9 +431,9 @@ const denyDevice = async (deviceId) => {
 .btn-icon { width: 16px; height: 16px; }
 
 .btn-deny-glass {
-  background: rgba(254, 242, 242, 0.85);
+  background: #fef2f2;
   color: #ef4444;
-  border: 1px solid rgba(254, 202, 202, 0.9);
+  border: 1px solid #fecaca;
 }
 
 .btn-deny-glass:hover {
@@ -460,9 +457,9 @@ const denyDevice = async (deviceId) => {
 .empty-state-panel {
   text-align: center;
   padding: 60px 20px;
-  background: rgba(255, 255, 255, 0.6);
+  background: #f8fafc;
   border-radius: 20px;
-  border: 2px dashed rgba(203, 213, 225, 0.8);
+  border: 2px dashed #cbd5e1;
 }
 
 .empty-emoji-ring {
@@ -494,5 +491,26 @@ const denyDevice = async (deviceId) => {
 .list-anim-leave-active {
   position: absolute;
   width: 100%;
+}
+
+/* Slide-side transitions */
+.slide-side-enter-active,
+.slide-side-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.slide-side-enter-active .panel-content-glass,
+.slide-side-leave-active .panel-content-glass {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-side-enter-from,
+.slide-side-leave-to {
+  opacity: 0;
+}
+
+.slide-side-enter-from .panel-content-glass,
+.slide-side-leave-to .panel-content-glass {
+  transform: translateX(100%);
 }
 </style>

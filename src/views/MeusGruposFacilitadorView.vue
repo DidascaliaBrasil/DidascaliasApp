@@ -26,7 +26,7 @@
         <!-- Hero Header Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -119,12 +119,12 @@
               </div>
 
               <div class="member-profile-row">
-                <div class="membro-avatar-mini">
+                <div class="membro-avatar-mini notranslate" translate="no">
                   {{ (membro.nome || 'U').charAt(0).toUpperCase() }}
                 </div>
                 <div class="member-meta">
-                  <span class="membro-name">{{ membro.nome }}</span>
-                  <span class="membro-email" :title="membro.email">{{ membro.email }}</span>
+                  <span class="membro-name notranslate" translate="no">{{ membro.nome }}</span>
+                  <span class="membro-email notranslate" translate="no" :title="membro.email">{{ membro.email }}</span>
                 </div>
               </div>
             </div>
@@ -144,13 +144,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { ref as dbRef, get, push, set } from 'firebase/database'
+import { database } from '../firebase'
+import { ref as dbRef, get, push, set, query, orderByChild, equalTo } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
 
 import MenuLateral from '../components/generic/MenuLateral.vue' 
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
 const userData = ref({})
 
@@ -164,9 +165,11 @@ const isCreatingGroup = ref(false)
 const mensagemGrupo = ref('')
 
 const initials = computed(() => {
-  const nome = userData.value.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nome = (userData.value.nome || '?').trim()
+  const nomes = nome.split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
@@ -189,85 +192,20 @@ const toggleSelection = (id) => {
   }
 }
 
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const shortId = user.uid.substring(0, 8).toUpperCase()
-        const fullId = user.uid
-        
-        let dataEncontrada = null
-        let idUsado = null
-        let tipoConta = null
-
-        const paths = [
-          { ref: `usuarios/${shortId}`, typeFallback: null },
-          { ref: `usuarios/${fullId}`, typeFallback: null },
-          { ref: `instituicoes/${shortId}`, typeFallback: 'Instituicao' },
-          { ref: `instituicoes/${fullId}`, typeFallback: 'Instituicao' }
-        ]
-
-        for (const path of paths) {
-          const snap = await get(dbRef(database, path.ref))
-          if (snap.exists()) {
-            dataEncontrada = snap.val()
-            idUsado = path.ref.split('/')[1] 
-            tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-            break
-          }
-        }
-
-        if (!dataEncontrada) {
-          const instSnap = await get(dbRef(database, 'instituicoes'))
-          if (instSnap.exists()) {
-            const instituicoes = instSnap.val()
-            for (const key in instituicoes) {
-              if (instituicoes[key].email === user.email) {
-                dataEncontrada = instituicoes[key]
-                idUsado = key
-                tipoConta = 'Instituicao'
-                break
-              }
-            }
-          }
-        }
-
-        if (!dataEncontrada) {
-          const usersSnap = await get(dbRef(database, 'usuarios'))
-          if (usersSnap.exists()) {
-            const usuarios = usersSnap.val()
-            for (const key in usuarios) {
-              if (usuarios[key].email === user.email) {
-                dataEncontrada = usuarios[key]
-                idUsado = key
-                tipoConta = usuarios[key].tipoCadastro || usuarios[key].tipo
-                break
-              }
-            }
-          }
-        }
-
-        if (dataEncontrada) {
-          userData.value = {
-            email: user.email, 
-            ...dataEncontrada,
-            id: idUsado,
-            tipo: tipoConta
-          }
-          
-          await fetchMembrosInstituicao(dataEncontrada.instituicaoId)
-        } else {
-          router.push('/')
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error)
-      } finally {
-        isLoading.value = false
-      }
+onMounted(async () => {
+  try {
+    const profile = await authStore.getUserProfile()
+    if (profile && profile.tipo !== 'indefinido') {
+      userData.value = profile
+      await fetchMembrosInstituicao(profile.instituicaoId)
     } else {
       router.push('/')
     }
-  })
+  } catch (error) {
+    console.error("Erro ao buscar dados:", error)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 const fetchMembrosInstituicao = async (instituicaoId) => {
@@ -277,14 +215,15 @@ const fetchMembrosInstituicao = async (instituicaoId) => {
   }
   
   try {
-    const usersRef = dbRef(database, 'usuarios')
-    const snapshot = await get(usersRef)
+    const qUsers = query(dbRef(database, 'usuarios'), orderByChild('instituicaoId'), equalTo(instituicaoId))
+    const snapshot = await get(qUsers)
     if (snapshot.exists()) {
       const todosUsuarios = snapshot.val()
       membros.value = Object.keys(todosUsuarios)
         .map(key => ({ id: key, ...todosUsuarios[key] }))
-        .filter(u => u.instituicaoId === instituicaoId)
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
+    } else {
+      membros.value = []
     }
   } catch (error) {
     console.error("Erro ao buscar membros:", error)
@@ -380,10 +319,14 @@ const criarGrupo = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .welcome-texts {
@@ -688,12 +631,15 @@ const criarGrupo = async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .membro-name {
   font-size: 0.98rem;
   font-weight: 700;
   color: #0f172a;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .membro-email {

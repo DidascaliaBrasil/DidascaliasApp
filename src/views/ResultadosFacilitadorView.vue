@@ -27,7 +27,7 @@
         <!-- Hero Header Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -116,15 +116,21 @@
             >
               <div class="room-card-top-row">
                 <span class="target-badge-pill">
-                  {{ sala.targetType === 'grupo' ? '👥 ' + sala.nomeAlvo : '👤 ' + sala.nomeAlvo }}
+                  {{ sala.targetType === 'grupo' ? '👥 ' : '👤 ' }}<span class="notranslate" translate="no">{{ sala.nomeAlvo }}</span>
                 </span>
                 
-                <span :class="['status-chip', sala.totalSessoes > 0 ? 'status-active' : 'status-pending']">
-                  {{ sala.totalSessoes > 0 ? `🟢 ${sala.totalSessoes} Sessão(ões)` : '⚪ Sem Sessões' }}
-                </span>
+                <div class="top-row-right-chips">
+                  <span :class="['situacao-badge', isSalaAtiva(sala) ? 'situacao-ativa' : 'situacao-inativa']">
+                    <span class="situacao-dot"></span>
+                    {{ isSalaAtiva(sala) ? 'Ativa' : 'Inativa' }}
+                  </span>
+                  <span :class="['status-chip', sala.totalSessoes > 0 ? 'status-active' : 'status-pending']">
+                    {{ sala.totalSessoes > 0 ? `🟢 ${sala.totalSessoes} Sessão(ões)` : '⚪ Sem Sessões' }}
+                  </span>
+                </div>
               </div>
 
-              <h4 class="room-card-name" :title="sala.roomName">{{ sala.roomName }}</h4>
+              <h4 class="room-card-name notranslate" translate="no" :title="sala.roomName">{{ sala.roomName }}</h4>
 
               <div class="room-card-chips">
                 <span class="room-chip">📐 {{ getShapeName(sala.shape) }}</span>
@@ -175,13 +181,17 @@
           <div class="workspace-header-card">
             <div class="w-header-left">
               <div class="w-tags-row">
-                <span class="role-pill pill-vr">SALA ATIVA</span>
+                <span class="role-pill pill-vr">SALA VR</span>
+                <span :class="['situacao-badge', isSalaAtiva(salaSelecionada) ? 'situacao-ativa' : 'situacao-inativa']">
+                  <span class="situacao-dot"></span>
+                  {{ isSalaAtiva(salaSelecionada) ? 'Sala Ativa' : 'Sala Inativa' }}
+                </span>
                 <span class="target-tag">
-                  {{ salaSelecionada.targetType === 'grupo' ? '👥 Turma: ' + salaSelecionada.nomeAlvo : '👤 Aluno: ' + salaSelecionada.nomeAlvo }}
+                  {{ salaSelecionada.targetType === 'grupo' ? '👥 Turma: ' : '👤 Aluno: ' }}<span class="notranslate" translate="no">{{ salaSelecionada.nomeAlvo }}</span>
                 </span>
                 <span class="date-tag">Criada em: {{ formatarData(salaSelecionada.criadoEm, 'data') }}</span>
               </div>
-              <h2 class="w-room-title">{{ salaSelecionada.roomName }}</h2>
+              <h2 class="w-room-title notranslate" translate="no">{{ salaSelecionada.roomName }}</h2>
             </div>
 
             <div class="w-header-right">
@@ -189,6 +199,28 @@
                 <span class="b-count">{{ salaSelecionada.totalSessoes }}</span>
                 <span class="b-lbl">Sessões Realizadas</span>
               </div>
+              <button 
+                class="btn-delete-sala-results" 
+                :title="isSalaAtiva(salaSelecionada) ? 'Sala ativa no momento (exclusão bloqueada)' : 'Excluir Sala VR e todos os seus dados'" 
+                @click="confirmarExclusaoSala(salaSelecionada)"
+                :disabled="excluindoSala || isSalaAtiva(salaSelecionada)"
+                :class="{ 'btn-disabled-locked': isSalaAtiva(salaSelecionada) }"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <span>{{ isSalaAtiva(salaSelecionada) ? 'Exclusão Bloqueada (Ativa)' : (excluindoSala ? 'Excluindo...' : 'Excluir Sala') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Alerta Visual quando Sala está Ativa -->
+          <div v-if="isSalaAtiva(salaSelecionada)" class="sala-ativa-banner-results">
+            <span class="lock-icon">🔒</span>
+            <div class="lock-text">
+              <strong>Sessão VR Ativa no Momento</strong>
+              <p>Esta sala está em andamento no óculos VR. A exclusão da sala fica bloqueada enquanto a situação for Ativa.</p>
             </div>
           </div>
 
@@ -269,10 +301,10 @@
                   :key="aluno.id"
                   :class="['student-row-tag', { 'is-played': salaSelecionada.participantesUnicosIds.includes(aluno.id) }]"
                 >
-                  <div class="s-row-avatar">{{ (aluno.nome || 'A').charAt(0).toUpperCase() }}</div>
+                  <div class="s-row-avatar notranslate" translate="no">{{ (aluno.nome || 'A').charAt(0).toUpperCase() }}</div>
                   <div class="s-row-info">
-                    <span class="s-row-name">{{ aluno.nome }}</span>
-                    <span class="s-row-sub" v-if="aluno.email">{{ aluno.email }}</span>
+                    <span class="s-row-name notranslate" translate="no">{{ aluno.nome }}</span>
+                    <span class="s-row-sub notranslate" translate="no" v-if="aluno.email">{{ aluno.email }}</span>
                   </div>
                   <span :class="['s-status-badge', salaSelecionada.participantesUnicosIds.includes(aluno.id) ? 'badge-ok' : 'badge-pending']">
                     {{ salaSelecionada.participantesUnicosIds.includes(aluno.id) ? '✓ Concluiu' : 'Pendente' }}
@@ -346,7 +378,7 @@
               <div class="empty-room-icon">🥽</div>
               <h4>Nenhuma sessão realizada nesta sala ainda</h4>
               <p>
-                Os alunos vinculados à turma <strong>{{ salaSelecionada.nomeAlvo }}</strong> ainda não iniciaram simulações nos óculos VR.
+                Os alunos vinculados à turma <strong class="notranslate" translate="no">{{ salaSelecionada.nomeAlvo }}</strong> ainda não iniciaram simulações nos óculos VR.
               </p>
               <div class="empty-tips-box">
                 <span class="tip-title">💡 Como iniciar uma sessão VR:</span>
@@ -425,15 +457,100 @@
       </Transition>
     </Teleport>
 
+    <!-- Modal Elegante de Confirmação de Exclusão de Sala VR (Substitui Alert Feio) -->
+    <Teleport to="body">
+      <Transition name="glass-modal">
+        <div v-if="salaParaExcluir" class="delete-modal-overlay" @click.self="cancelarExclusao">
+          <div class="delete-modal-box" @click.stop>
+            
+            <div class="delete-icon-wrapper">
+              <div class="delete-icon-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="delete-warn-svg">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Caso Sem Permissão -->
+            <template v-if="salaParaExcluir.semPermissao">
+              <h3 class="delete-modal-title">Ação Não Permitida</h3>
+              <p class="delete-modal-subdesc">
+                {{ mensagemPermissao || 'Você só possui autorização para excluir as salas VR que você mesmo criou.' }}
+              </p>
+              <div class="delete-modal-actions single-action">
+                <button class="btn-cancel-delete" @click="cancelarExclusao">
+                  Entendido
+                </button>
+              </div>
+            </template>
+
+            <!-- Caso Com Permissão: Confirmação Estilizada -->
+            <template v-else>
+              <h3 class="delete-modal-title">Excluir Sala VR?</h3>
+              <div class="delete-modal-room-badge notranslate" translate="no">
+                <span class="room-badge-icon">🥽</span>
+                <span class="room-name-text">{{ salaParaExcluir.roomName || 'Sala VR' }}</span>
+              </div>
+
+              <div class="delete-modal-points">
+                <div class="delete-point-row">
+                  <span class="bullet-dot"></span>
+                  <span>Todas as configurações desta sala serão apagadas do sistema.</span>
+                </div>
+                <div class="delete-point-row">
+                  <span class="bullet-dot"></span>
+                  <span>Todos os resultados, métricas e telemetria gerados no VR serão excluídos permanentemente.</span>
+                </div>
+                <div class="delete-point-row alert">
+                  <span class="bullet-dot red"></span>
+                  <span>Esta operação é definitiva e irreversível.</span>
+                </div>
+              </div>
+
+              <p v-if="mensagemPermissao" class="delete-error-note">
+                ⚠️ {{ mensagemPermissao }}
+              </p>
+
+              <div class="delete-modal-actions">
+                <button 
+                  class="btn-cancel-delete" 
+                  @click="cancelarExclusao" 
+                  :disabled="excluindoSala"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  class="btn-confirm-delete" 
+                  @click="executarExclusaoSala" 
+                  :disabled="excluindoSala"
+                >
+                  <span v-if="excluindoSala" class="btn-spinner-delete"></span>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="trash-action-svg">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>{{ excluindoSala ? 'Excluindo...' : 'Sim, Excluir Sala' }}</span>
+                </button>
+              </div>
+            </template>
+
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { ref as dbRef, get } from 'firebase/database'
+import { database } from '../firebase'
+import { ref as dbRef, remove } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
+import { isSalaAtiva, getSituacaoLabel } from '../utils/salaUtils'
 
 import MenuLateral from '../components/generic/MenuLateral.vue'
 import { 
@@ -443,6 +560,7 @@ import {
 } from '../services/resultadosService'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
 const userData = ref({})
 
@@ -454,9 +572,11 @@ const filtroStatus = ref('todas') // 'todas' | 'com_sessoes' | 'sem_sessoes'
 const sessaoModal = ref(null)
 
 const initials = computed(() => {
-  const nome = userData.value.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nome = (userData.value.nome || '?').trim()
+  const nomes = nome.split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
@@ -525,66 +645,96 @@ const fecharModalSessao = () => {
   sessaoModal.value = null
 }
 
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const shortId = user.uid.substring(0, 8).toUpperCase()
-        const fullId = user.uid
+const excluindoSala = ref(false)
+const salaParaExcluir = ref(null)
+const mensagemPermissao = ref('')
+
+const confirmarExclusaoSala = (sala) => {
+  if (!sala || !sala.id) return
+
+  // Validação: não permitir exclusão se a sala estiver ativa
+  if (isSalaAtiva(sala)) {
+    mensagemPermissao.value = "Esta sala está com status \"Ativa\" no momento. Finalize a sessão antes de tentar excluí-la."
+    salaParaExcluir.value = { ...sala, semPermissao: true }
+    return
+  }
+
+  const idsAutorizados = [
+    userData.value.id,
+    userData.value.uid,
+    userData.value.authUid,
+    userData.value.idCurto
+  ].filter(Boolean)
+
+  if (sala.facilitadorId && !idsAutorizados.includes(sala.facilitadorId)) {
+    mensagemPermissao.value = "Você só tem permissão para excluir as salas que você mesmo criou."
+    salaParaExcluir.value = { ...sala, semPermissao: true }
+    return
+  }
+
+  mensagemPermissao.value = ''
+  salaParaExcluir.value = { ...sala, semPermissao: false }
+}
+
+const cancelarExclusao = () => {
+  salaParaExcluir.value = null
+  mensagemPermissao.value = ''
+}
+
+const executarExclusaoSala = async () => {
+  if (!salaParaExcluir.value?.id) return
+  const salaId = salaParaExcluir.value.id
+
+  if (isSalaAtiva(salaParaExcluir.value)) {
+    mensagemPermissao.value = "Esta sala está ativa no momento e não pode ser excluída."
+    return
+  }
+
+  excluindoSala.value = true
+  try {
+    const salaRef = dbRef(database, `classroom_configs/${salaId}`)
+    await remove(salaRef)
+
+    minhasSalas.value = minhasSalas.value.filter(s => s.id !== salaId)
+    if (salaSelecionada.value?.id === salaId) {
+      salaSelecionada.value = minhasSalas.value[0] || null
+    }
+    cancelarExclusao()
+  } catch (error) {
+    console.error("Erro ao excluir sala VR:", error)
+    mensagemPermissao.value = "Ocorreu um erro ao tentar excluir a sala. Tente novamente."
+  } finally {
+    excluindoSala.value = false
+  }
+}
+
+onMounted(async () => {
+  try {
+    const profile = await authStore.getUserProfile()
+    if (profile && profile.tipo !== 'indefinido') {
+      userData.value = profile
+      const instId = profile.instituicaoId
+      if (instId) {
+        const raw = await carregarDadosCompletosInstituicao(instId)
+        minhasSalas.value = raw.salas.filter(s => 
+          s.facilitadorId === profile.id || 
+          s.facilitadorId === profile.shortId || 
+          s.facilitadorId === profile.uid
+        )
         
-        let dataEncontrada = null
-        let idUsado = null
-        let tipoConta = null
-
-        const paths = [
-          { ref: `usuarios/${shortId}`, typeFallback: null },
-          { ref: `usuarios/${fullId}`, typeFallback: null },
-          { ref: `instituicoes/${shortId}`, typeFallback: 'Instituicao' },
-          { ref: `instituicoes/${fullId}`, typeFallback: 'Instituicao' }
-        ]
-
-        for (const path of paths) {
-          const snap = await get(dbRef(database, path.ref))
-          if (snap.exists()) {
-            dataEncontrada = snap.val()
-            idUsado = path.ref.split('/')[1] 
-            tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-            break
-          }
+        if (minhasSalas.value.length > 0) {
+          const salaComSessao = minhasSalas.value.find(s => s.totalSessoes > 0)
+          salaSelecionada.value = salaComSessao || minhasSalas.value[0]
         }
-
-        if (dataEncontrada) {
-          userData.value = {
-            email: user.email, 
-            ...dataEncontrada,
-            id: idUsado,
-            tipo: tipoConta
-          }
-
-          const instId = dataEncontrada.instituicaoId
-          if (instId) {
-            const raw = await carregarDadosCompletosInstituicao(instId)
-            // Filtra exclusivamente as salas criadas por este facilitador
-            minhasSalas.value = raw.salas.filter(s => s.facilitadorId === idUsado || s.facilitadorId === shortId || s.facilitadorId === fullId)
-            
-            // Seleciona por padrão a sala com sessões mais recente ou a primeira
-            if (minhasSalas.value.length > 0) {
-              const salaComSessao = minhasSalas.value.find(s => s.totalSessoes > 0)
-              salaSelecionada.value = salaComSessao || minhasSalas.value[0]
-            }
-          }
-        } else {
-          router.push('/')
-        }
-      } catch (error) {
-        console.error("Erro ao carregar resultados do facilitador:", error)
-      } finally {
-        isLoading.value = false
       }
     } else {
       router.push('/')
     }
-  })
+  } catch (error) {
+    console.error("Erro ao carregar resultados do facilitador:", error)
+  } finally {
+    isLoading.value = false
+  }
 })
 </script>
 
@@ -624,10 +774,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .welcome-texts {
@@ -824,6 +978,93 @@ onMounted(() => {
   align-items: center;
 }
 
+.top-row-right-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.situacao-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.2px;
+  transition: all 0.2s ease;
+}
+
+.situacao-badge.situacao-ativa {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.situacao-badge.situacao-inativa {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.situacao-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.situacao-ativa .situacao-dot {
+  background: #16a34a;
+  box-shadow: 0 0 6px #16a34a;
+  animation: pulseDot 1.8s infinite;
+}
+
+.situacao-inativa .situacao-dot {
+  background: #94a3b8;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.btn-delete-sala-results.btn-disabled-locked {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+.sala-ativa-banner-results {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-radius: 14px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  color: #991b1b;
+}
+
+.sala-ativa-banner-results .lock-icon {
+  font-size: 1.4rem;
+}
+
+.sala-ativa-banner-results .lock-text strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.sala-ativa-banner-results .lock-text p {
+  font-size: 0.80rem;
+  margin: 0;
+  color: #b91c1c;
+}
+
 .target-badge-pill {
   font-size: 0.74rem;
   font-weight: 700;
@@ -984,6 +1225,45 @@ onMounted(() => {
 
 .b-count { font-size: 1.8rem; font-weight: 800; color: #0071e3; display: block; line-height: 1; margin-bottom: 2px; }
 .b-lbl { font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+.w-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-delete-sala-results {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-sala-results:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+.btn-delete-sala-results:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-delete-sala-results svg {
+  width: 16px;
+  height: 16px;
+}
 
 /* 3 Columns Grid */
 .room-details-grid-3 {
@@ -1420,6 +1700,215 @@ onMounted(() => {
 
 .glass-modal-enter-active, .glass-modal-leave-active { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .glass-modal-enter-from, .glass-modal-leave-to { opacity: 0; transform: scale(0.96) translateY(10px); }
+
+/* Modal de Confirmação de Exclusão Elegante (Substitui Alert Feio) */
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200000 !important;
+  padding: 20px;
+}
+
+.delete-modal-box {
+  background: #ffffff;
+  border-radius: 22px;
+  max-width: 440px;
+  width: 100%;
+  padding: 28px 24px 24px 24px;
+  box-shadow: 
+    0 25px 60px -15px rgba(220, 38, 38, 0.25),
+    0 0 0 1px rgba(239, 68, 68, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.delete-icon-wrapper {
+  margin-bottom: 2px;
+}
+
+.delete-icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #fee2e2;
+  border: 2px solid #fca5a5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc2626;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
+.delete-warn-svg {
+  width: 28px;
+  height: 28px;
+}
+
+.delete-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+}
+
+.delete-modal-subdesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.delete-modal-room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  padding: 8px 16px;
+  border-radius: 12px;
+  max-width: 100%;
+}
+
+.room-badge-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.room-name-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #b91c1c;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.delete-modal-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  width: 100%;
+}
+
+.delete-point-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.bullet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.bullet-dot.red {
+  background: #ef4444;
+}
+
+.delete-point-row.alert {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.delete-error-note {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.delete-modal-actions.single-action {
+  justify-content: center;
+}
+
+.btn-cancel-delete {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-delete:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-confirm-delete {
+  flex: 1.3;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-confirm-delete:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
+}
+
+.btn-confirm-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trash-action-svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-spinner-delete {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
 
 @media (max-width: 768px) {
   .room-details-grid-3 { grid-template-columns: 1fr; }

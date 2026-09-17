@@ -249,12 +249,12 @@
         <LanguageSelector variant="inline" />
 
         <div class="account-card">
-          <div class="avatar-glass notranslate">
+          <div class="avatar-glass notranslate" translate="no">
             {{ userInitial }}
           </div>
           <div class="account-details">
-            <span class="account-name notranslate" :title="userDisplayName">{{ userDisplayName }}</span>
-            <span class="email-display notranslate" :title="userData?.email">
+            <span class="account-name notranslate" translate="no" :title="userDisplayName">{{ userDisplayName }}</span>
+            <span class="email-display notranslate" translate="no" :title="userData?.email">
               {{ userData?.email || 'Carregando...' }}
             </span>
           </div>
@@ -271,6 +271,27 @@
       </div>
 
     </aside>
+
+    <!-- Modais VR Teleportados para o Body (disponíveis em qualquer rota da aplicação) -->
+    <Teleport to="body">
+      <Transition name="slide-side">
+        <LinkarOculos 
+          v-if="oculosModalStore.isLinkarOpen && instituicaoId" 
+          :instituicaoId="instituicaoId"
+          @fechar="oculosModalStore.fecharLinkar()"
+        />
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="slide-side">
+        <GerenciarOculos 
+          v-if="oculosModalStore.isGerenciarOpen && instituicaoId" 
+          :instituicaoId="instituicaoId"
+          @fechar="oculosModalStore.fecharGerenciar()"
+        />
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -279,7 +300,11 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../../firebase'
 import { signOut } from 'firebase/auth'
+import { useAuthStore } from '../../stores/auth'
+import { useOculosModalStore } from '../../stores/oculosModal'
 import LanguageSelector from './LanguageSelector.vue'
+import LinkarOculos from '../instituicao/LinkarOculos.vue'
+import GerenciarOculos from '../instituicao/GerenciarOculos.vue'
 
 const props = defineProps({
   userData: {
@@ -292,7 +317,13 @@ const props = defineProps({
 const emit = defineEmits(['abrir-linkar-oculos', 'abrir-gerenciar-oculos'])
 
 const router = useRouter()
+const authStore = useAuthStore()
+const oculosModalStore = useOculosModalStore()
 const menuAberto = ref(false)
+
+const instituicaoId = computed(() => {
+  return props.userData?.instituicaoId || props.userData?.id || ''
+})
 
 const tipoConta = computed(() => {
   if (!props.userData.tipo) return 'indefinido'
@@ -337,16 +368,19 @@ const lidarCliqueMenu = (event) => {
 
 const abrirLinkar = () => {
   fecharMenu()
+  oculosModalStore.abrirLinkar()
   emit('abrir-linkar-oculos')
 }
 
 const abrirGerenciar = () => {
   fecharMenu()
+  oculosModalStore.abrirGerenciar()
   emit('abrir-gerenciar-oculos')
 }
 
 const handleLogout = async () => {
   try {
+    authStore.clearProfile()
     await signOut(auth)
     router.push('/')
   } catch (error) {
@@ -403,18 +437,16 @@ const handleLogout = async () => {
   z-index: 10001;
 }
 
-/* Drawer Lateral Apple Glass */
+/* Drawer Lateral Sólido (Sem transparência) */
 .menu-lateral {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   width: 320px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border-right: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 20px 0 50px rgba(15, 23, 42, 0.12), 1px 0 0 rgba(255, 255, 255, 0.4);
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 16px 0 40px rgba(15, 23, 42, 0.16);
   z-index: 10002;
   display: flex;
   flex-direction: column;
@@ -423,7 +455,7 @@ const handleLogout = async () => {
   box-sizing: border-box;
   overflow-y: auto;
   transform: translateX(-100%);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .menu-lateral.is-open {
@@ -708,12 +740,11 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
+  background: #f8fafc;
   padding: 10px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .avatar-glass {
@@ -760,8 +791,8 @@ const handleLogout = async () => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(254, 242, 242, 0.8);
-  border: 1px solid rgba(254, 202, 202, 0.9);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   color: #ef4444;
   padding: 10px;
   border-radius: 12px;

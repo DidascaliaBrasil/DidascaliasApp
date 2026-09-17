@@ -27,7 +27,7 @@
         <!-- Hero Header Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -99,7 +99,7 @@
                 </span>
               </div>
 
-              <h4 class="urc-title">{{ room.salaNome }}</h4>
+              <h4 class="urc-title notranslate" translate="no">{{ room.salaNome }}</h4>
 
               <div class="urc-stats-row">
                 <div class="urc-stat">
@@ -190,7 +190,7 @@
               <div class="timeline-card-header">
                 <div class="t-room-group">
                   <span class="role-pill pill-vr">VR COMPLETO</span>
-                  <h4 class="t-room-name">{{ sessao.salaNome }}</h4>
+                  <h4 class="t-room-name notranslate" translate="no">{{ sessao.salaNome }}</h4>
                 </div>
                 <div class="t-badges-group">
                   <span class="time-badge">⏱️ {{ sessao.duracaoFormatada }}</span>
@@ -238,7 +238,7 @@
             <div class="modal-header">
               <div class="modal-title-wrapper">
                 <span class="modal-tag">DETALHES DA MINHA SESSÃO</span>
-                <h3 class="modal-title">{{ sessaoModal.salaNome }}</h3>
+                <h3 class="modal-title notranslate" translate="no">{{ sessaoModal.salaNome }}</h3>
               </div>
               <button class="close-btn" @click="fecharModalSessao">&times;</button>
             </div>
@@ -287,9 +287,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { ref as dbRef, get } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
 
 import MenuLateral from '../components/generic/MenuLateral.vue'
 import { 
@@ -300,6 +298,7 @@ import {
 } from '../services/resultadosService'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
 const userData = ref({})
 
@@ -307,9 +306,11 @@ const minhasSessoes = ref([])
 const sessaoModal = ref(null)
 
 const initials = computed(() => {
-  const nome = userData.value.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nome = (userData.value.nome || '?').trim()
+  const nomes = nome.split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
@@ -377,59 +378,25 @@ const fecharModalSessao = () => {
   sessaoModal.value = null
 }
 
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const shortId = user.uid.substring(0, 8).toUpperCase()
-        const fullId = user.uid
-        
-        let dataEncontrada = null
-        let idUsado = null
-        let tipoConta = null
-
-        const paths = [
-          { ref: `usuarios/${shortId}`, typeFallback: null },
-          { ref: `usuarios/${fullId}`, typeFallback: null }
-        ]
-
-        for (const path of paths) {
-          const snap = await get(dbRef(database, path.ref))
-          if (snap.exists()) {
-            dataEncontrada = snap.val()
-            idUsado = path.ref.split('/')[1] 
-            tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-            break
-          }
-        }
-
-        if (dataEncontrada) {
-          userData.value = {
-            email: user.email, 
-            uid: user.uid,
-            ...dataEncontrada,
-            id: idUsado,
-            tipo: tipoConta
-          }
-
-          const instId = dataEncontrada.instituicaoId
-          if (instId) {
-            const raw = await carregarDadosCompletosInstituicao(instId)
-            // Filtro estrito: APENAS sessões do próprio usuário logado!
-            minhasSessoes.value = raw.sessoesTodas.filter(s => isParticipantUser(s.activeParticipantId, userData.value))
-          }
-        } else {
-          router.push('/')
-        }
-      } catch (error) {
-        console.error("Erro ao carregar resultados do usuário:", error)
-      } finally {
-        isLoading.value = false
+onMounted(async () => {
+  try {
+    const profile = await authStore.getUserProfile()
+    if (profile && profile.tipo !== 'indefinido') {
+      userData.value = profile
+      const instId = profile.instituicaoId
+      if (instId) {
+        const raw = await carregarDadosCompletosInstituicao(instId)
+        // Filtro estrito: APENAS sessões do próprio usuário logado!
+        minhasSessoes.value = raw.sessoesTodas.filter(s => isParticipantUser(s.activeParticipantId, userData.value))
       }
     } else {
       router.push('/')
     }
-  })
+  } catch (error) {
+    console.error("Erro ao carregar resultados do usuário:", error)
+  } finally {
+    isLoading.value = false
+  }
 })
 </script>
 
@@ -469,10 +436,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .welcome-texts {
@@ -635,6 +606,8 @@ onMounted(() => {
   font-weight: 800;
   color: #0f172a;
   margin: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .urc-stats-row {
@@ -772,7 +745,14 @@ onMounted(() => {
   border-radius: 9999px;
 }
 
-.t-room-name { font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0; }
+.t-room-name { 
+  font-size: 1.15rem; 
+  font-weight: 800; 
+  color: #0f172a; 
+  margin: 0; 
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
 
 .t-badges-group { display: flex; align-items: center; gap: 8px; }
 

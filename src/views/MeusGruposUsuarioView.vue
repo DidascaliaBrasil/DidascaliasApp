@@ -26,7 +26,7 @@
         <!-- Hero Header Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -73,11 +73,11 @@
                 </span>
               </div>
 
-              <h4 class="grupo-title">{{ grupo.nome }}</h4>
+              <h4 class="grupo-title notranslate" translate="no">{{ grupo.nome }}</h4>
               
               <div class="facilitador-info-pill">
                 <span class="f-label">Facilitador:</span>
-                <span class="f-name">{{ grupo.facilitadorNome || 'Orientador' }}</span>
+                <span class="f-name notranslate" translate="no">{{ grupo.facilitadorNome || 'Orientador' }}</span>
               </div>
 
               <div class="card-footer-action">
@@ -101,7 +101,7 @@
                   <div class="modal-header">
                     <div class="modal-title-wrapper">
                       <span class="modal-tag">DETALHES DA TURMA</span>
-                      <h3 class="modal-title">{{ grupoSelecionado?.nome }}</h3>
+                      <h3 class="modal-title notranslate" translate="no">{{ grupoSelecionado?.nome }}</h3>
                     </div>
                     <button class="close-btn" @click="fecharModal" aria-label="Fechar modal">&times;</button>
                   </div>
@@ -109,7 +109,7 @@
                   <div class="modal-body">
                     <div class="facilitador-hero-glass">
                       <span class="f-label">Facilitador Responsável</span>
-                      <span class="f-hero-name">{{ grupoSelecionado?.facilitadorNome || 'Orientador da Turma' }}</span>
+                      <span class="f-hero-name notranslate" translate="no">{{ grupoSelecionado?.facilitadorNome || 'Orientador da Turma' }}</span>
                     </div>
                     
                     <h4 class="section-subtitle" style="margin-top: 20px;">
@@ -118,10 +118,10 @@
                     
                     <div class="participants-list-glass">
                       <div v-for="p in grupoSelecionado?.participantes" :key="p.id" class="member-item-glass">
-                        <div class="p-avatar-glass">{{ (p.nome || 'U').charAt(0).toUpperCase() }}</div>
+                        <div class="p-avatar-glass notranslate" translate="no">{{ (p.nome || 'U').charAt(0).toUpperCase() }}</div>
                         <div class="p-info-glass">
-                          <span class="p-name-glass">{{ p.nome }}</span>
-                          <span class="p-email-glass">{{ p.email }}</span>
+                          <span class="p-name-glass notranslate" translate="no">{{ p.nome }}</span>
+                          <span class="p-email-glass notranslate" translate="no">{{ p.email }}</span>
                         </div>
                       </div>
                     </div>
@@ -141,13 +141,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { database } from '../firebase'
 import { ref as dbRef, get } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
 
 import MenuLateral from '../components/generic/MenuLateral.vue' 
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
 const userData = ref({})
 
@@ -168,59 +169,28 @@ const fecharModal = () => {
 }
 
 const initials = computed(() => {
-  const nome = userData.value.nome || '?'
-  const nomes = nome.trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nome = (userData.value.nome || '?').trim()
+  const nomes = nome.split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const shortId = user.uid.substring(0, 8).toUpperCase()
-        const fullId = user.uid
-        
-        let dataEncontrada = null
-        let idUsado = null
-        let tipoConta = null
-
-        const paths = [
-          { ref: `usuarios/${shortId}`, typeFallback: null },
-          { ref: `usuarios/${fullId}`, typeFallback: null }
-        ]
-
-        for (const path of paths) {
-          const snap = await get(dbRef(database, path.ref))
-          if (snap.exists()) {
-            dataEncontrada = snap.val()
-            idUsado = path.ref.split('/')[1] 
-            tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-            break
-          }
-        }
-
-        if (dataEncontrada) {
-          userData.value = {
-            email: user.email, 
-            ...dataEncontrada,
-            id: idUsado,
-            tipo: tipoConta
-          }
-          
-          await fetchGrupos(userData.value)
-        } else {
-          router.push('/')
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error)
-      } finally {
-        isLoading.value = false
-      }
+onMounted(async () => {
+  try {
+    const profile = await authStore.getUserProfile()
+    if (profile && profile.tipo !== 'indefinido') {
+      userData.value = profile
+      await fetchGrupos(userData.value)
     } else {
       router.push('/')
     }
-  })
+  } catch (error) {
+    console.error("Erro ao buscar dados:", error)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 const fetchGrupos = async (userObj) => {
@@ -293,10 +263,14 @@ const fetchGrupos = async (userObj) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .welcome-texts {
@@ -438,6 +412,8 @@ const fetchGrupos = async (userObj) => {
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 10px 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .facilitador-info-pill {
@@ -449,6 +425,7 @@ const fetchGrupos = async (userObj) => {
   flex-direction: column;
   gap: 2px;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .f-label {
@@ -456,12 +433,14 @@ const fetchGrupos = async (userObj) => {
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
+  word-break: break-word;
 }
 
 .f-name {
   font-size: 0.88rem;
   font-weight: 700;
   color: #0f172a;
+  word-break: break-word;
 }
 
 .card-footer-action {

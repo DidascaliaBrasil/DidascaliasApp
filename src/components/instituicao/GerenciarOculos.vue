@@ -67,7 +67,7 @@
                   
                   <!-- Modo Visualização de Nome -->
                   <div v-else class="view-title-row">
-                    <h3 class="device-name-text">{{ device.modelo || 'Óculos VR Cadastrado' }}</h3>
+                    <h3 class="device-name-text notranslate" translate="no">{{ device.modelo || 'Óculos VR Cadastrado' }}</h3>
                     <button class="btn-rename-pill" @click="startRename(device)" title="Renomear dispositivo">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-pencil">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -82,7 +82,7 @@
               <div class="card-meta-glass">
                 <div class="info-row">
                   <span class="meta-label">ID do Dispositivo:</span>
-                  <span class="meta-value code-chip" :title="device.id">{{ device.id }}</span>
+                  <span class="meta-value code-chip notranslate" translate="no" :title="device.id">{{ device.id }}</span>
                 </div>
                 <div class="info-row">
                   <span class="meta-label">Sincronizado em:</span>
@@ -212,9 +212,7 @@ const deleteDevice = async (deviceId) => {
   position: fixed;
   top: 0; left: 0;
   width: 100vw; height: 100vh;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.45);
   z-index: 99999;
   display: flex;
   justify-content: flex-end;
@@ -224,11 +222,9 @@ const deleteDevice = async (deviceId) => {
   width: 480px;
   max-width: 100vw;
   height: 100%;
-  background: rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(36px) saturate(200%);
-  -webkit-backdrop-filter: blur(36px) saturate(200%);
-  border-left: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: -20px 0 60px rgba(15, 23, 42, 0.15);
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -15px 0 45px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
 }
@@ -238,8 +234,8 @@ const deleteDevice = async (deviceId) => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 28px;
-  background: rgba(255, 255, 255, 0.7);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .logo-area {
@@ -255,8 +251,8 @@ const deleteDevice = async (deviceId) => {
 .panel-tag { font-size: 0.68rem; font-weight: 700; color: #0071e3; letter-spacing: 0.8px; }
 
 .btn-fechar-panel {
-  background: rgba(241, 245, 249, 0.8);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   color: #64748b;
   cursor: pointer;
   width: 36px;
@@ -290,8 +286,8 @@ const deleteDevice = async (deviceId) => {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(236, 253, 245, 0.9);
-  border: 1px solid rgba(167, 243, 208, 0.9);
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
   color: #059669;
   font-size: 0.74rem;
   font-weight: 700;
@@ -346,17 +342,18 @@ const deleteDevice = async (deviceId) => {
 }
 
 .device-card-glass {
-  background: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
   border-radius: 20px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
   transition: all 0.25s ease;
 }
 
 .device-card-glass:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(0, 113, 227, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 113, 227, 0.08);
+  border-color: #cbd5e1;
 }
 
 .card-head {
@@ -370,7 +367,7 @@ const deleteDevice = async (deviceId) => {
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  background: #eff6ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -405,8 +402,8 @@ const deleteDevice = async (deviceId) => {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(241, 245, 249, 0.9);
-  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
   padding: 4px 8px;
   border-radius: 8px;
   font-size: 0.76rem;
@@ -471,10 +468,10 @@ const deleteDevice = async (deviceId) => {
 
 /* Meta */
 .card-meta-glass {
-  background: rgba(248, 250, 252, 0.85);
+  background: #f8fafc;
   border-radius: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid #e2e8f0;
   margin-bottom: 14px;
 }
 
@@ -508,8 +505,8 @@ const deleteDevice = async (deviceId) => {
 
 .btn-delete-glass {
   width: 100%;
-  background: rgba(254, 242, 242, 0.7);
-  border: 1px solid rgba(254, 202, 202, 0.8);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   color: #ef4444;
   padding: 9px;
   border-radius: 12px;
@@ -534,9 +531,9 @@ const deleteDevice = async (deviceId) => {
 .empty-state-panel {
   text-align: center;
   padding: 60px 20px;
-  background: rgba(255, 255, 255, 0.6);
+  background: #f8fafc;
   border-radius: 20px;
-  border: 2px dashed rgba(203, 213, 225, 0.8);
+  border: 2px dashed #cbd5e1;
 }
 
 .empty-emoji-ring { font-size: 3rem; margin-bottom: 12px; }
@@ -547,4 +544,25 @@ const deleteDevice = async (deviceId) => {
 .list-anim-enter-active, .list-anim-leave-active { transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .list-anim-enter-from, .list-anim-leave-to { opacity: 0; transform: translateY(16px) scale(0.97); }
 .list-anim-leave-active { position: absolute; width: 100%; }
+
+/* Slide-side transitions */
+.slide-side-enter-active,
+.slide-side-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.slide-side-enter-active .panel-content-glass,
+.slide-side-leave-active .panel-content-glass {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-side-enter-from,
+.slide-side-leave-to {
+  opacity: 0;
+}
+
+.slide-side-enter-from .panel-content-glass,
+.slide-side-leave-to .panel-content-glass {
+  transform: translateX(100%);
+}
 </style>

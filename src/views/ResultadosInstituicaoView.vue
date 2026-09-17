@@ -28,7 +28,7 @@
         <!-- Hero Header Glass -->
         <div class="profile-hero-glass">
           <div class="profile-header-content">
-            <div class="user-avatar-glass">{{ initials }}</div>
+            <div class="user-avatar-glass notranslate" translate="no">{{ initials }}</div>
             <div class="welcome-texts">
               <div class="badge-role-tag">
                 <span class="pulse-dot"></span>
@@ -36,7 +36,7 @@
               </div>
               <h1 class="welcome-title">Desempenho Geral da Instituição</h1>
               <p class="welcome-subtitle">
-                {{ userData.nomeInstituicao || userData.nomeFaculdade || 'Instituição' }} &bull; Gestão unificada de facilitadores, salas de aula VR e estudantes.
+                <span class="notranslate" translate="no">{{ userData.nomeInstituicao || userData.nomeFaculdade || 'Instituição' }}</span> &bull; Gestão unificada de facilitadores, salas de aula VR e estudantes.
               </p>
             </div>
           </div>
@@ -45,7 +45,7 @@
           <div class="hierarchy-breadcrumb-bar" v-if="facilitadorFiltroSelecionado || salaFiltroSelecionada">
             <span class="crumb-label">Filtro Ativo:</span>
             <button class="crumb-pill" @click="resetarFiltrosHierarquia">
-              🏛️ {{ userData.nomeInstituicao || userData.nomeFaculdade || 'Instituição' }}
+              🏛️ <span class="notranslate" translate="no">{{ userData.nomeInstituicao || userData.nomeFaculdade || 'Instituição' }}</span>
             </button>
             <span class="crumb-sep" v-if="facilitadorFiltroSelecionado">&rsaquo;</span>
             <button 
@@ -53,11 +53,11 @@
               class="crumb-pill active"
               @click="salaFiltroSelecionada = null"
             >
-              👨‍🏫 {{ facilitadorFiltroSelecionado.nome }}
+              👨‍🏫 <span class="notranslate" translate="no">{{ facilitadorFiltroSelecionado.nome }}</span>
             </button>
             <span class="crumb-sep" v-if="salaFiltroSelecionada">&rsaquo;</span>
             <button v-if="salaFiltroSelecionada" class="crumb-pill active">
-              🥽 {{ salaFiltroSelecionada.roomName }}
+              🥽 <span class="notranslate" translate="no">{{ salaFiltroSelecionada.roomName }}</span>
             </button>
             <button class="btn-clear-crumb" @click="resetarFiltrosHierarquia">
               Limpar Filtro &times;
@@ -339,13 +339,13 @@
           <div v-if="facilitadorFiltroSelecionado" class="focused-facilitator-banner glass-card">
             <div class="focused-fac-header">
               <div class="focused-fac-left">
-                <div class="focused-avatar">
+                <div class="focused-avatar notranslate" translate="no">
                   {{ (facilitadorFiltroSelecionado.nome || 'F').charAt(0).toUpperCase() }}
                 </div>
                 <div>
                   <span class="fac-tag-badge">FACILITADOR SELECIONADO</span>
-                  <h3 class="focused-fac-name">{{ facilitadorFiltroSelecionado.nome }}</h3>
-                  <span class="focused-fac-email">{{ facilitadorFiltroSelecionado.email }}</span>
+                  <h3 class="focused-fac-name notranslate" translate="no">{{ facilitadorFiltroSelecionado.nome }}</h3>
+                  <span class="focused-fac-email notranslate" translate="no">{{ facilitadorFiltroSelecionado.email }}</span>
                 </div>
               </div>
               <button class="btn-clear-selection" @click="facilitadorFiltroSelecionado = null">
@@ -381,13 +381,13 @@
               :class="['glass-card', 'facilitador-stat-card', { 'is-active-card': facilitadorFiltroSelecionado?.id === fac.id }]"
             >
               <div class="fac-card-header">
-                <div class="fac-avatar">
+                <div class="fac-avatar notranslate" translate="no">
                   {{ (fac.nome || 'F').charAt(0).toUpperCase() }}
                 </div>
                 <div class="fac-meta">
-                  <h4 class="fac-name">{{ fac.nome }}</h4>
-                  <span class="fac-email" v-if="fac.email">{{ fac.email }}</span>
-                  <span class="fac-id-badge">ID: {{ (fac.id || '').substring(0, 8) }}</span>
+                  <h4 class="fac-name notranslate" translate="no">{{ fac.nome }}</h4>
+                  <span class="fac-email notranslate" translate="no" v-if="fac.email">{{ fac.email }}</span>
+                  <span class="fac-id-badge notranslate" translate="no">ID: {{ (fac.id || '').substring(0, 8) }}</span>
                 </div>
               </div>
 
@@ -420,7 +420,7 @@
                     class="room-chip-btn"
                     @click="abrirModalSala(s)"
                   >
-                    🥽 {{ s.roomName }} ({{ s.totalSessoes }} sessões)
+                    🥽 <span class="notranslate" translate="no">{{ s.roomName }}</span> ({{ s.totalSessoes }} sessões)
                   </button>
                 </div>
               </div>
@@ -481,11 +481,11 @@
                   <div class="sala-tag-row">
                     <span class="premium-badge-vr">🥽 SALA VR</span>
                     <span class="premium-badge-target">
-                      {{ sala.targetType === 'grupo' ? '👥 Turma: ' + sala.nomeAlvo : '👤 Aluno: ' + sala.nomeAlvo }}
+                      {{ sala.targetType === 'grupo' ? '👥 Turma: ' : '👤 Aluno: ' }}<span class="notranslate" translate="no">{{ sala.nomeAlvo }}</span>
                     </span>
-                    <span class="premium-badge-fac">👨‍🏫 Orientador: {{ sala.facilitadorNome }}</span>
+                    <span class="premium-badge-fac">👨‍🏫 Orientador: <span class="notranslate" translate="no">{{ sala.facilitadorNome }}</span></span>
                   </div>
-                  <h4 class="sala-det-title">{{ sala.roomName }}</h4>
+                  <h4 class="sala-det-title notranslate" translate="no">{{ sala.roomName }}</h4>
                   <span class="sala-date">📅 Criada em: {{ formatarData(sala.criadoEm, 'data') }}</span>
                 </div>
 
@@ -562,7 +562,7 @@
                     :class="['student-enrolled-pill', { 'has-played': sala.participantesUnicosIds.includes(normalizarId(aluno.id)) }]"
                   >
                     <span class="st-dot"></span>
-                    <span class="st-name">{{ aluno.nome }}</span>
+                    <span class="st-name notranslate" translate="no">{{ aluno.nome }}</span>
                     <span class="st-status">{{ sala.participantesUnicosIds.includes(normalizarId(aluno.id)) ? '✓ Concluiu' : 'Pendente' }}</span>
                   </div>
                 </div>
@@ -614,13 +614,13 @@
               class="glass-card aluno-stat-card"
             >
               <div class="aluno-card-top">
-                <div class="aluno-avatar-lg">
+                <div class="aluno-avatar-lg notranslate" translate="no">
                   {{ (aluno.nome || 'A').charAt(0).toUpperCase() }}
                 </div>
                 <div class="aluno-info-box">
-                  <h4 class="aluno-name">{{ aluno.nome }}</h4>
-                  <span class="aluno-email" v-if="aluno.email">{{ aluno.email }}</span>
-                  <span class="aluno-id-tag">ID: {{ (aluno.id || '').substring(0, 8) }}</span>
+                  <h4 class="aluno-name notranslate" translate="no">{{ aluno.nome }}</h4>
+                  <span class="aluno-email notranslate" translate="no" v-if="aluno.email">{{ aluno.email }}</span>
+                  <span class="aluno-id-tag notranslate" translate="no">ID: {{ (aluno.id || '').substring(0, 8) }}</span>
                 </div>
               </div>
 
@@ -701,7 +701,7 @@
             <div class="modal-header">
               <div class="modal-title-wrapper">
                 <span class="modal-tag">HISTÓRICO DO ESTUDANTE</span>
-                <h3 class="modal-title">{{ alunoModal.nome }}</h3>
+                <h3 class="modal-title notranslate" translate="no">{{ alunoModal.nome }}</h3>
               </div>
               <button class="close-btn" @click="fecharModalAluno">&times;</button>
             </div>
@@ -780,7 +780,7 @@
             <div class="modal-header">
               <div class="modal-title-wrapper">
                 <span class="modal-tag">SESSÕES DA SALA VR</span>
-                <h3 class="modal-title">{{ salaModal.roomName }}</h3>
+                <h3 class="modal-title notranslate" translate="no">{{ salaModal.roomName }}</h3>
               </div>
               <button class="close-btn" @click="fecharModalSala">&times;</button>
             </div>
@@ -921,9 +921,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, database } from '../firebase'
-import { onAuthStateChanged } from 'firebase/auth'
-import { ref as dbRef, get } from 'firebase/database'
+import { useAuthStore } from '../stores/auth'
 
 import MenuLateral from '../components/generic/MenuLateral.vue'
 import IntentsDonutChart from '../components/instituicao/charts/IntentsDonutChart.vue'
@@ -939,8 +937,8 @@ import {
 } from '../services/resultadosService'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isLoading = ref(true)
-const isReloading = ref(false)
 const userData = ref({})
 
 const activeTab = ref('geral') // 'geral' | 'facilitadores' | 'salas' | 'alunos'
@@ -986,8 +984,10 @@ const salaModal = ref(null)
 
 const initials = computed(() => {
   const nome = userData.value.nomeFaculdade || userData.value.nomeInstituicao || userData.value.nome || '?'
-  const nomes = String(nome).trim().split(' ')
-  if (nomes.length === 1) return nomes[0].substring(0, 2).toUpperCase()
+  const nomes = String(nome).trim().split(/\s+/)
+  if (nomes.length === 1) {
+    return nomes[0].length <= 4 ? nomes[0].toUpperCase() : nomes[0].substring(0, 2).toUpperCase()
+  }
   return (nomes[0][0] + nomes[nomes.length - 1][0]).toUpperCase()
 })
 
@@ -1077,119 +1077,34 @@ const fecharModalSala = () => {
   salaModal.value = null
 }
 
-const buscarDados = async (user) => {
-  const shortId = user.uid.substring(0, 8).toUpperCase()
-  const fullId = user.uid
-  
-  let dataEncontrada = null
-  let idUsado = null
-  let tipoConta = null
-
-  // 1. Busca direta por nós
-  const paths = [
-    { ref: `instituicoes/${shortId}`, typeFallback: 'Instituicao' },
-    { ref: `instituicoes/${fullId}`, typeFallback: 'Instituicao' },
-    { ref: `usuarios/${shortId}`, typeFallback: null },
-    { ref: `usuarios/${fullId}`, typeFallback: null }
-  ]
-
-  for (const path of paths) {
-    const snap = await get(dbRef(database, path.ref))
-    if (snap.exists()) {
-      dataEncontrada = snap.val()
-      idUsado = path.ref.split('/')[1] 
-      tipoConta = dataEncontrada.tipoCadastro || dataEncontrada.tipo || path.typeFallback
-      break
-    }
-  }
-
-  // 2. Fallback por E-mail em 'instituicoes'
-  if (!dataEncontrada) {
-    const instSnap = await get(dbRef(database, 'instituicoes'))
-    if (instSnap.exists()) {
-      const instituicoes = instSnap.val()
-      for (const key in instituicoes) {
-        if (instituicoes[key]?.email?.toLowerCase() === user.email?.toLowerCase()) {
-          dataEncontrada = instituicoes[key]
-          idUsado = key
-          tipoConta = 'Instituicao'
-          break
-        }
-      }
-    }
-  }
-
-  // 3. Fallback por E-mail em 'usuarios'
-  if (!dataEncontrada) {
-    const usersSnap = await get(dbRef(database, 'usuarios'))
-    if (usersSnap.exists()) {
-      const usuarios = usersSnap.val()
-      for (const key in usuarios) {
-        if (usuarios[key]?.email?.toLowerCase() === user.email?.toLowerCase()) {
-          dataEncontrada = usuarios[key]
-          idUsado = key
-          tipoConta = usuarios[key].tipoCadastro || usuarios[key].tipo
-          break
-        }
-      }
-    }
-  }
-
-  if (dataEncontrada) {
-    userData.value = {
-      email: user.email, 
-      ...dataEncontrada,
-      id: idUsado,
-      tipo: tipoConta
-    }
-
+const buscarDados = async () => {
+  const profile = await authStore.getUserProfile()
+  if (profile && profile.tipo !== 'indefinido') {
+    userData.value = profile
+    const idUsado = profile.id || profile.instituicaoId
     const idsIdentificadores = [
       idUsado,
-      shortId,
-      fullId,
-      dataEncontrada.instituicaoId,
-      dataEncontrada.idCurto,
-      dataEncontrada.authUid
+      profile.uid,
+      profile.instituicaoId,
+      profile.idCurto,
+      profile.authUid
     ].filter(Boolean)
 
     rawData.value = await carregarDadosCompletosInstituicao(idUsado, idsIdentificadores)
     metricas.value = processarMetricasInstituicao(rawData.value)
   } else {
-    router.push('/home')
+    router.push('/')
   }
 }
 
-const recarregarDados = async () => {
-  if (isReloading.value) return
-  isReloading.value = true
-  const user = auth.currentUser
-  if (user) {
-    try {
-      await buscarDados(user)
-    } catch (e) {
-      console.error("Erro ao recarregar relatórios:", e)
-    } finally {
-      isReloading.value = false
-    }
-  } else {
-    isReloading.value = false
+onMounted(async () => {
+  try {
+    await buscarDados()
+  } catch (error) {
+    console.error("Erro ao carregar relatórios institucionais:", error)
+  } finally {
+    isLoading.value = false
   }
-}
-
-onMounted(() => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        await buscarDados(user)
-      } catch (error) {
-        console.error("Erro ao carregar relatórios institucionais:", error)
-      } finally {
-        isLoading.value = false
-      }
-    } else {
-      router.push('/')
-    }
-  })
 })
 </script>
 
@@ -1265,10 +1180,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+  text-align: center;
+  letter-spacing: -0.5px;
 }
 
 .welcome-texts {
@@ -2205,6 +2124,8 @@ onMounted(() => {
   color: #0f172a;
   margin: 2px 0 0 0;
   letter-spacing: -0.4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .sala-date { font-size: 0.78rem; color: #94a3b8; font-weight: 500; }
