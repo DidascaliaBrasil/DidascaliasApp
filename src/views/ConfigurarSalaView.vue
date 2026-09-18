@@ -1482,6 +1482,8 @@ const iniciarListenersOtimizados = () => {
       sala.value.Alunos = snap.val() || null
       if (!alunoAlvoSelecionado.value && alunosVR.value.length > 0) {
         alunoAlvoSelecionado.value = alunosVR.value[0].nome
+      } else if (alunosVR.value.length === 0) {
+        alunoAlvoSelecionado.value = ''
       }
     }
   })
@@ -1575,11 +1577,22 @@ const salvarConfiguracoesAtivas = async () => {
 
     updates[`classroom_configs/${sala.value.id}/activeParticipantId`] = selectedActiveParticipant.value
     updates[`classroom_configs/${sala.value.id}/activeHeadsetId`] = selectedActiveOculos.value || null
+    // Apaga o conjunto inteiro de Alunos (Aluno1, Aluno2, Aluno3, ...) de dentro da configuração da sala
+    updates[`classroom_configs/${sala.value.id}/Alunos`] = null
 
     await update(dbRef(database), updates)
 
+    // Remoção explícita de segurança para garantir que todo o nó Alunos seja limpo do Firebase
+    try {
+      await remove(dbRef(database, `classroom_configs/${sala.value.id}/Alunos`))
+    } catch (errRemocao) {
+      console.warn("Nó Alunos já removido:", errRemocao)
+    }
+
     sala.value.activeParticipantId = selectedActiveParticipant.value
     sala.value.activeHeadsetId = selectedActiveOculos.value || null
+    sala.value.Alunos = null
+    alunoAlvoSelecionado.value = ''
 
     tipoMensagem.value = 'success'
     mensagemAtivos.value = 'Configuração da sessão salva com sucesso!' + mensagemExtra
