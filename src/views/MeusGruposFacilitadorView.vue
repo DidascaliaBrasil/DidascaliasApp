@@ -107,9 +107,19 @@
               @click="toggleSelection(membro.id)"
             >
               <div class="card-top">
-                <span :class="['role-pill', `pill-${(membro.tipoCadastro || membro.tipo || '').toLowerCase()}`]">
-                  {{ membro.tipoCadastro || membro.tipo || 'Aluno' }}
-                </span>
+                <div class="card-top-left">
+                  <span :class="['role-pill', `pill-${(membro.tipoCadastro || membro.tipo || '').toLowerCase()}`]">
+                    {{ membro.tipoCadastro || membro.tipo || 'Aluno' }}
+                  </span>
+                  
+                  <span 
+                    v-if="getUserGroupCount(membro.id) > 0" 
+                    class="group-count-bubble"
+                    :title="`Já se encontra em ${getUserGroupCount(membro.id)} grupo(s)`"
+                  >
+                    {{ getUserGroupCount(membro.id) }}
+                  </span>
+                </div>
                 
                 <div class="glass-checkbox">
                   <svg v-if="isSelected(membro.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -157,12 +167,15 @@ const userData = ref({})
 
 const membros = ref([])
 const loadingMembros = ref(true)
+const userGroupsCount = ref({})
 
 const novoGrupoNome = ref('')
 const searchQuery = ref('')
 const selectedMembers = ref([])
 const isCreatingGroup = ref(false)
 const mensagemGrupo = ref('')
+
+const getUserGroupCount = (id) => userGroupsCount.value[id] || 0
 
 const initials = computed(() => {
   const nome = (userData.value.nome || '?').trim()
@@ -216,17 +229,98 @@ const fetchMembrosInstituicao = async (instituicaoId) => {
   
   try {
     const qUsers = query(dbRef(database, 'usuarios'), orderByChild('instituicaoId'), equalTo(instituicaoId))
-    const snapshot = await get(qUsers)
-    if (snapshot.exists()) {
-      const todosUsuarios = snapshot.val()
-      membros.value = Object.keys(todosUsuarios)
+    const qGrupos = dbRef(database, `instituicoes/${instituicaoId}/grupos`)
+    
+    // Consulta otimizada em paralelo: apenas 1 round-trip no Firebase para usuários e grupos (Zero N+1)
+    const [snapshotUsers, snapshotGrupos] = await Promise.all([
+      get(qUsers),
+      get(qGrupos)
+    ])
+
+    // 1. Processar membros
+    let listaMembros = []
+    if (snapshotUsers.exists()) {
+      const todosUsuarios = snapshotUsers.val()
+      listaMembros = Object.keys(todosUsuarios)
         .map(key => ({ id: key, ...todosUsuarios[key] }))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
-    } else {
-      membros.value = []
     }
+
+    // 2. Mapeamento email -> id para garantir resolução precisa de participantes
+    const emailToIdMap = new Map()
+    listaMembros.forEach(m => {
+      if (m.email) {
+        emailToIdMap.set(m.email.toLowerCase().trim(), m.id)
+      }
+    })
+
+    // 3. Processar contagem de grupos por participante em memória O(G * P)
+    const counts = {}
+    if (snapshotGrupos.exists()) {
+      const todosGrupos = snapshotGrupos.val()
+      Object.values(todosGrupos).forEach(grupo => {
+        if (!grupo) return
+        
+        const participantIds = new Set()
+
+        // Participantes em formato de Array
+        if (Array.isArray(grupo.participantes)) {
+          grupo.participantes.forEach(p => {
+            if (!p) return
+            if (typeof p === 'string') {
+              participantIds.add(p.trim())
+            } else {
+              if (p.id) participantIds.add(String(p.id).trim())
+              if (p.email && emailToIdMap.has(p.email.toLowerCase().trim())) {
+                participantIds.add(emailToIdMap.get(p.email.toLowerCase().trim()))
+              }
+            }
+          })
+        } 
+        // Participantes em formato de Objeto/Dicionário
+        else if (grupo.participantes && typeof grupo.participantes === 'object') {
+          Object.keys(grupo.participantes).forEach(key => {
+            const p = grupo.participantes[key]
+            if (!p) return
+            if (typeof p === 'string') {
+              participantIds.add(p.trim())
+            } else if (p.id) {
+              participantIds.add(String(p.id).trim())
+            } else if (p.email && emailToIdMap.has(p.email.toLowerCase().trim())) {
+              participantIds.add(emailToIdMap.get(p.email.toLowerCase().trim()))
+            } else {
+              participantIds.add(key.trim())
+            }
+          })
+        }
+
+        // Suporte adicional a campo 'membros' caso exista em registros legados
+        if (grupo.membros) {
+          if (Array.isArray(grupo.membros)) {
+            grupo.membros.forEach(m => {
+              if (!m) return
+              if (typeof m === 'string') participantIds.add(m)
+              else if (m.id) participantIds.add(m.id)
+            })
+          } else if (typeof grupo.membros === 'object') {
+            Object.keys(grupo.membros).forEach(key => participantIds.add(key))
+          }
+        }
+
+        // Incrementa contagem de grupos para cada participante único deste grupo
+        participantIds.forEach(id => {
+          counts[id] = (counts[id] || 0) + 1
+        })
+      })
+    }
+
+    userGroupsCount.value = counts
+    membros.value = listaMembros.map(m => ({
+      ...m,
+      totalGrupos: counts[m.id] || 0
+    }))
   } catch (error) {
-    console.error("Erro ao buscar membros:", error)
+    console.error("Erro ao buscar membros e grupos:", error)
   } finally {
     loadingMembros.value = false
   }
@@ -268,6 +362,11 @@ const criarGrupo = async () => {
       facilitadorNome: userData.value.nome,
       participantes: participantesData,
       criadoEm: new Date().toISOString()
+    })
+
+    // Atualiza contagem local para feedback instantâneo
+    selectedMembers.value.forEach(id => {
+      userGroupsCount.value[id] = (userGroupsCount.value[id] || 0) + 1
     })
 
     mensagemGrupo.value = "Grupo salvo com sucesso!"
@@ -585,6 +684,44 @@ const criarGrupo = async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.card-top-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-count-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  letter-spacing: -0.2px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  cursor: help;
+  user-select: none;
+}
+
+.group-count-bubble:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
+.member-select-card.is-selected .group-count-bubble {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
 .glass-checkbox {
