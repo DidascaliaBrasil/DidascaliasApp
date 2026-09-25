@@ -563,10 +563,18 @@
                 <!-- Resumo quando colapsado e sala ativa -->
                 <div v-if="!menu3Aberto && isSalaAtiva(sala)" class="module-collapsed-summary">
                   <span v-if="!podeModificarEControlar" class="summary-chip locked">
-                    👁️ Acompanhamento em tempo real • {{ alunosVR.length > 0 ? alunosVR.length + ' Alunos 3D' : 'Alunos n encontrados' }} (Somente Leitura)
+                    👁️ Acompanhamento em tempo real • {{ alunosVR.length > 0 ? alunosVR.length + ' Alunos 3D' : 'Alunos n encontrados' }} 
+                    <template v-if="metricasCondicoesVR.tea > 0 || metricasCondicoesVR.tdah > 0">
+                      ({{ metricasCondicoesVR.tea }} TEA • {{ metricasCondicoesVR.tdah }} TDAH)
+                    </template>
+                    (Somente Leitura)
                   </span>
                   <span v-else class="summary-chip purple">
-                    ⚡ 19 Comandos VR Prontos • {{ alunosVR.length > 0 ? alunosVR.length + ' Alunos 3D' : 'Alunos n encontrados' }} (Clique para abrir)
+                    ⚡ 19 Comandos VR Prontos • {{ alunosVR.length > 0 ? alunosVR.length + ' Alunos 3D' : 'Alunos n encontrados' }} 
+                    <template v-if="metricasCondicoesVR.tea > 0 || metricasCondicoesVR.tdah > 0">
+                      ({{ metricasCondicoesVR.tea }} TEA • {{ metricasCondicoesVR.tdah }} TDAH)
+                    </template>
+                    • (Clique para abrir)
                   </span>
                 </div>
                 <!-- Alerta quando sala inativa (Sem opção de clicar) -->
@@ -579,10 +587,20 @@
             </div>
 
             <div class="header-right-controls">
-              <!-- Contador de Alunos no VR ou Fallback -->
+              <!-- Contador de Alunos no VR ou Fallback com breakdown TEA/TDAH -->
               <div class="vr-students-count-chip" v-if="alunosVR.length > 0">
-                <span class="count-num">{{ alunosVR.length }}</span>
-                <span class="count-lbl">Alunos 3D</span>
+                <div class="count-main-row">
+                  <span class="count-num">{{ alunosVR.length }}</span>
+                  <span class="count-lbl">Alunos 3D</span>
+                </div>
+                <div class="count-cond-pills" v-if="metricasCondicoesVR.tea > 0 || metricasCondicoesVR.tdah > 0">
+                  <span v-if="metricasCondicoesVR.tea > 0" class="cond-pill-mini cond-tea" title="Alunos com TEA">
+                    🧩 {{ metricasCondicoesVR.tea }} TEA
+                  </span>
+                  <span v-if="metricasCondicoesVR.tdah > 0" class="cond-pill-mini cond-tdah" title="Alunos com TDAH">
+                    ⚡ {{ metricasCondicoesVR.tdah }} TDAH
+                  </span>
+                </div>
               </div>
               <div class="vr-students-notfound-chip" v-else>
                 <span class="notfound-icon">⚠️</span>
@@ -636,7 +654,14 @@
                       <span class="subhead-title">Selecione o Aluno Alvo no VR:</span>
                     </div>
                     <div class="step-subhead-right">
-                      <span v-if="alunoAlvoSelecionado" class="selected-target-pill notranslate" translate="no">
+                      <span v-if="alunoAlvoSelecionado && alunoAlvoObj && (alunoAlvoObj.isTEA || alunoAlvoObj.isTDAH)" class="selected-target-pill notranslate" translate="no">
+                        Aluno Selecionado: <strong>{{ alunoAlvoObj.nome }}</strong>
+                        <span :class="['pill-cond-badge', alunoAlvoObj.isTEA ? 'cond-tea' : 'cond-tdah']">
+                          <span class="cond-icon">{{ alunoAlvoObj.isTEA ? '🧩' : '⚡' }}</span>
+                          {{ alunoAlvoObj.condicao }}
+                        </span>
+                      </span>
+                      <span v-else-if="alunoAlvoSelecionado" class="selected-target-pill notranslate" translate="no">
                         Aluno Selecionado: <strong>{{ alunoAlvoSelecionado }}</strong>
                       </span>
                       <span v-else-if="alunosVR.length === 0" class="notfound-target-pill">
@@ -648,26 +673,113 @@
                     </div>
                   </div>
 
+                  <!-- Barra de Filtros e Busca dos Alunos Virtuais VR -->
+                  <div v-if="alunosVR.length > 0" class="vr-students-filter-toolbar">
+                    <!-- Tabs de Filtro focadas em TEA e TDAH -->
+                    <div class="vr-condition-tabs">
+                      <button
+                        type="button"
+                        class="cond-tab-btn"
+                        :class="{ 'active': filtroCondicaoAlunoVR === 'todos' }"
+                        @click="filtroCondicaoAlunoVR = 'todos'"
+                      >
+                        <span class="cond-tab-icon">👥</span>
+                        <span class="cond-tab-label">Todos</span>
+                        <span class="cond-tab-count">{{ metricasCondicoesVR.total }}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="cond-tab-btn tab-tea"
+                        :class="{ 'active': filtroCondicaoAlunoVR === 'tea' }"
+                        @click="filtroCondicaoAlunoVR = 'tea'"
+                      >
+                        <span class="cond-tab-icon">🧩</span>
+                        <span class="cond-tab-label">Alunos com TEA</span>
+                        <span class="cond-tab-count highlight-count">{{ metricasCondicoesVR.tea }}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="cond-tab-btn tab-tdah"
+                        :class="{ 'active': filtroCondicaoAlunoVR === 'tdah' }"
+                        @click="filtroCondicaoAlunoVR = 'tdah'"
+                      >
+                        <span class="cond-tab-icon">⚡</span>
+                        <span class="cond-tab-label">Alunos com TDAH</span>
+                        <span class="cond-tab-count highlight-count">{{ metricasCondicoesVR.tdah }}</span>
+                      </button>
+                    </div>
+
+                    <!-- Busca Rápida de Aluno Virtual -->
+                    <div class="vr-students-search-box">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mini-search-svg">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      </svg>
+                      <input
+                        type="text"
+                        v-model="buscaAlunoVR"
+                        placeholder="Buscar aluno ou carteira..."
+                        class="mini-search-input"
+                      />
+                      <button v-if="buscaAlunoVR" type="button" class="mini-clear-btn" @click="buscaAlunoVR = ''">&times;</button>
+                    </div>
+                  </div>
+
                   <!-- Lista de Chips de Alunos 3D -->
-                  <div v-if="alunosVR.length > 0" class="vr-target-students-grid">
+                  <div v-if="alunosVRFiltrados.length > 0" class="vr-target-students-grid">
                     <button
-                      v-for="aluno in alunosVR"
+                      v-for="aluno in alunosVRFiltrados"
                       :key="aluno.key"
                       type="button"
                       class="vr-student-target-btn notranslate"
                       translate="no"
-                      :class="{ 'is-selected': alunoAlvoSelecionado === aluno.nome, 'btn-disabled': !podeModificarEControlar }"
+                      :class="[
+                        { 
+                          'is-selected': alunoAlvoSelecionado === aluno.nome,
+                          'btn-disabled': !podeModificarEControlar,
+                          'is-tea-target': aluno.isTEA,
+                          'is-tdah-target': aluno.isTDAH,
+                          'is-typical-target': aluno.isTipico
+                        }
+                      ]"
                       :disabled="!isSalaAtiva(sala) || !podeModificarEControlar"
                       @click="podeModificarEControlar && (alunoAlvoSelecionado = aluno.nome)"
+                      :title="aluno.isTEA ? `${aluno.nome} (${aluno.key}) • Aluno com TEA` : aluno.isTDAH ? `${aluno.nome} (${aluno.key}) • Aluno com TDAH` : `${aluno.nome} (${aluno.key})`"
                     >
-                      <div class="target-avatar">
-                        {{ (aluno.nome || 'A').charAt(0).toUpperCase() }}
+                      <!-- Avatar com indicador apenas se for TEA ou TDAH -->
+                      <div class="target-avatar-wrapper" :class="{ 'avatar-special': aluno.isTEA || aluno.isTDAH }">
+                        <div class="target-avatar">
+                          {{ (aluno.nome || 'A').charAt(0).toUpperCase() }}
+                        </div>
+                        <span v-if="aluno.isTEA" class="avatar-cond-dot dot-tea" title="Condição: TEA">🧩</span>
+                        <span v-else-if="aluno.isTDAH" class="avatar-cond-dot dot-tdah" title="Condição: TDAH">⚡</span>
                       </div>
+
                       <div class="target-name-wrap">
                         <span class="target-name">{{ aluno.nome }}</span>
-                        <span class="target-slot-code">{{ aluno.key }}</span>
+                        <div class="target-meta-row">
+                          <span class="target-slot-code">{{ aluno.key }}</span>
+                          <!-- Badge Chamativo SOMENTE para TEA e TDAH -->
+                          <span v-if="aluno.isTEA" class="student-neuro-badge badge-tea">
+                            <span class="badge-icon">🧩</span> TEA
+                          </span>
+                          <span v-else-if="aluno.isTDAH" class="student-neuro-badge badge-tdah">
+                            <span class="badge-icon">⚡</span> TDAH
+                          </span>
+                        </div>
                       </div>
+
                       <span v-if="alunoAlvoSelecionado === aluno.nome" class="target-check-badge">✓</span>
+                    </button>
+                  </div>
+
+                  <!-- Se o filtro não encontrou alunos -->
+                  <div v-else-if="alunosVR.length > 0" class="empty-vr-filter-box">
+                    <span class="empty-filter-text">Nenhum aluno virtual encontrado para os critérios selecionados.</span>
+                    <button type="button" class="btn-clear-vr-filter" @click="filtroCondicaoAlunoVR = 'todos'; buscaAlunoVR = ''">
+                      Limpar Filtros (Ver Todos)
                     </button>
                   </div>
 
@@ -715,7 +827,11 @@
                       v-for="cat in categoriasAcoes"
                       :key="cat.id"
                       class="cat-pill"
-                      :class="{ active: categoriaAcaoAtiva === cat.id }"
+                      :class="[
+                        { active: categoriaAcaoAtiva === cat.id },
+                        cat.id === 'tea' ? 'cat-pill-tea' : '',
+                        cat.id === 'tdah' ? 'cat-pill-tdah' : ''
+                      ]"
                       :disabled="!isSalaAtiva(sala) || !podeModificarEControlar"
                       @click="podeModificarEControlar && (categoriaAcaoAtiva = cat.id)"
                     >
@@ -731,12 +847,35 @@
                       v-for="acao in acoesFiltradas"
                       :key="acao.id"
                       class="action-choice-card"
-                      :class="{ 'is-selected': acaoSelecionada === acao.id, 'card-disabled': !isSalaAtiva(sala) || !podeModificarEControlar }"
-                      @click="isSalaAtiva(sala) && podeModificarEControlar && (acaoSelecionada = acao.id)"
+                      :class="{ 
+                        'is-selected': acaoSelecionada === acao.id, 
+                        'card-disabled': !isSalaAtiva(sala) || !podeModificarEControlar,
+                        'is-condition-locked': !isAcaoDisponivelParaAluno(acao),
+                        'is-exclusive-tea': acao.condicaoExclusiva === 'TEA',
+                        'is-exclusive-tdah': acao.condicaoExclusiva === 'TDAH'
+                      }"
+                      :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : acao.desc"
+                      @click="selecionarAcao(acao)"
                     >
                       <div class="action-card-top">
                         <span class="action-emoji-symbol">{{ acao.icon }}</span>
-                        <span v-if="acaoSelecionada === acao.id" class="action-selected-tag">✓ Selecionada</span>
+                        <div class="action-top-badges">
+                          <!-- Badge de Exclusividade TEA / TDAH -->
+                          <span v-if="acao.condicaoExclusiva === 'TEA'" class="action-exclusive-badge badge-tea" title="Ação exclusiva para alunos com TEA">
+                            🧩 Exclusivo TEA
+                          </span>
+                          <span v-else-if="acao.condicaoExclusiva === 'TDAH'" class="action-exclusive-badge badge-tdah" title="Ação exclusiva para alunos com TDAH">
+                            ⚡ Exclusivo TDAH
+                          </span>
+                          <!-- Badge de Bloqueio se indisponível -->
+                          <span v-if="!isAcaoDisponivelParaAluno(acao)" class="action-lock-badge" :title="getAcaoLockReason(acao)">
+                            🔒 Indisponível
+                          </span>
+                          <!-- Badge de Selecionada -->
+                          <span v-else-if="acaoSelecionada === acao.id" class="action-selected-tag">
+                            ✓ Selecionada
+                          </span>
+                        </div>
                       </div>
 
                       <h5 class="action-title-text">{{ acao.label }}</h5>
@@ -744,6 +883,9 @@
 
                       <div class="action-card-footer">
                         <code class="action-code-tag">{{ acao.id }}</code>
+                        <span v-if="!isAcaoDisponivelParaAluno(acao)" class="action-lock-hint">
+                          Requer {{ acao.condicaoExclusiva }}
+                        </span>
                       </div>
                     </div>
 
@@ -766,9 +908,15 @@
                   <div class="dispatch-summary">
                     <div class="summary-target-info">
                       <span class="summary-lbl">DESTINATÁRIO (ALUNO ALVO):</span>
-                      <strong class="summary-val notranslate" translate="no">
-                        {{ alunoAlvoSelecionado ? alunoAlvoSelecionado : (alunosVR.length === 0 ? 'Alunos n encontrados' : 'Selecione no Passo 1') }}
-                      </strong>
+                      <div class="summary-val-wrap notranslate" translate="no">
+                        <strong class="summary-val">
+                          {{ alunoAlvoSelecionado ? alunoAlvoSelecionado : (alunosVR.length === 0 ? 'Alunos n encontrados' : 'Selecione no Passo 1') }}
+                        </strong>
+                        <span v-if="alunoAlvoObj && (alunoAlvoObj.isTEA || alunoAlvoObj.isTDAH)" :class="['summary-cond-pill', alunoAlvoObj.isTEA ? 'cond-tea' : 'cond-tdah']">
+                          <span class="cond-icon-mini">{{ alunoAlvoObj.isTEA ? '🧩' : '⚡' }}</span>
+                          {{ alunoAlvoObj.condicao }}
+                        </span>
+                      </div>
                     </div>
                     <div class="summary-sep">→</div>
                     <div class="summary-action-info">
@@ -782,7 +930,7 @@
                   <button
                     type="button"
                     class="btn-dispatch-command"
-                    :disabled="enviandoComando || !isSalaAtiva(sala) || !podeModificarEControlar || !acaoSelecionada || !alunoAlvoSelecionado || alunosVR.length === 0"
+                    :disabled="enviandoComando || !isSalaAtiva(sala) || !podeModificarEControlar || !acaoSelecionada || !alunoAlvoSelecionado || (acaoSelecionadaObj && !isAcaoDisponivelParaAluno(acaoSelecionadaObj)) || alunosVR.length === 0"
                     @click="enviarComandoVR"
                   >
                     <span v-if="enviandoComando" class="btn-spinner-tech"></span>
@@ -810,7 +958,12 @@
                       <div class="feed-item-left">
                         <span class="feed-status-dot"></span>
                         <span class="feed-time">{{ formatHoraComando(cmd.timestamp) }}</span>
-                        <span class="feed-aluno notranslate" translate="no">{{ cmd.aluno_alvo }}</span>
+                        <div class="feed-aluno-pill notranslate" translate="no">
+                          <span class="feed-aluno-name">{{ cmd.aluno_alvo }}</span>
+                          <span v-if="getCondicaoAlunoVR(cmd.aluno_alvo) && (getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' || getCondicaoAlunoVR(cmd.aluno_alvo) === 'TDAH')" :class="['feed-cond-tag', getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? 'cond-tea' : 'cond-tdah']">
+                            {{ getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? '🧩 TEA' : '⚡ TDAH' }}
+                          </span>
+                        </div>
                         <span class="feed-arrow">→</span>
                         <span class="feed-conflito">
                           {{ getNomeConflito(cmd.tipo_conflito) }}
@@ -965,6 +1118,7 @@ import { database } from '../firebase'
 import { ref as dbRef, get, update, remove, query, orderByChild, equalTo, push, onValue, limitToLast } from 'firebase/database'
 import { useAuthStore } from '../stores/auth'
 import { isSalaAtiva } from '../utils/salaUtils'
+import { parseAlunosVR, calcularMetricasCondicoesVR, getCondicaoBadgeMeta } from '../utils/alunosVRUtils'
 import MenuLateral from '../components/generic/MenuLateral.vue'
 
 const router = useRouter()
@@ -1047,24 +1201,24 @@ const facilitadorNome = ref('Facilitador')
 // MÓDULO 03: INTERAÇÃO & COMANDOS VR
 // ==========================================
 const CONFLITOS_VR = [
-  { id: 'TakeMaterialAll', label: 'Pegar todo o material', icon: '🎒', category: 'material', desc: 'Aluno recolhe todo o material da carteira' },
-  { id: 'StandUpConflict', label: 'Levantar em situação de conflito', icon: '⚡', category: 'comportamento', desc: 'Aluno levanta-se em confronto ou atrito' },
-  { id: 'Hyperstimulate', label: 'Hiperestimular', icon: '🧠', category: 'emocional', desc: 'Gera estado de agitação e sobrecarga sensorial' },
-  { id: 'GetDistracted', label: 'Distrair-se', icon: '💭', category: 'atencao', desc: 'Perde o foco na aula e dispersa a atenção' },
-  { id: 'DrawDistracted', label: 'Desenhar distraído(a)', icon: '✏️', category: 'atencao', desc: 'Fica rabiscando ou desenhando no caderno' },
-  { id: 'BotherRandomStudents', label: 'Incomodar alunos aleatórios', icon: '👉', category: 'social', desc: 'Interrompe e mexe com colegas próximos' },
-  { id: 'GetOutMaterialWrong', label: 'Pegar o material errado', icon: '❌', category: 'material', desc: 'Tira da mochila itens não solicitados' },
-  { id: 'SitTogether', label: 'Sentar junto', icon: '🪑', category: 'social', desc: 'Muda de lugar para sentar próximo a outro aluno' },
-  { id: 'StandUp', label: 'Levantar-se', icon: '🧍', category: 'movimento', desc: 'Levanta-se da sua carteira na sala' },
-  { id: 'LeaveDesk', label: 'Sair da carteira', icon: '🚶', category: 'movimento', desc: 'Afasta-se do seu lugar e circula pela sala' },
-  { id: 'MoveToRandomPoint', label: 'Mover-se para ponto aleatório', icon: '🎲', category: 'movimento', desc: 'Desloca-se até um ponto qualquer da sala' },
-  { id: 'RunToRandomPoint', label: 'Correr para ponto aleatório', icon: '🏃', category: 'movimento', desc: 'Corre de forma desgovernada pela sala' },
-  { id: 'AnxiousRunToRandomPoint', label: 'Correr ansiosamente', icon: '😰', category: 'emocional', desc: 'Fuga ansiosa e agitada pela sala' },
-  { id: 'MoveToFrontDoor', label: 'Mover-se para a porta da frente', icon: '🚪', category: 'movimento', desc: 'Caminha em direção à porta de entrada' },
-  { id: 'GoToFloor', label: 'Sentar no chão', icon: '🧘', category: 'comportamento', desc: 'Senta-se no chão entre as carteiras' },
-  { id: 'ChangeSits', label: 'Trocar de assento (ChangeSeats)', icon: '🔄', category: 'movimento', desc: 'Troca de carteira com outro colega' },
-  { id: 'TakeMaterialOut', label: 'Pegar o material', icon: '📖', category: 'material', desc: 'Retira seu material da mochila' },
-  { id: 'Make Students Laugh', label: 'Fazer os alunos rirem', icon: '😄', category: 'social', desc: 'Conta piada ou faz brincadeira para a turma rir' },
+  { id: 'TakeMaterialAll', label: 'Pegar todo o material', icon: '🎒', category: 'material', condicaoExclusiva: null, desc: 'Aluno recolhe todo o material da carteira' },
+  { id: 'StandUpConflict', label: 'Levantar em situação de conflito', icon: '⚡', category: 'comportamento', condicaoExclusiva: null, desc: 'Aluno levanta-se em confronto ou atrito' },
+  { id: 'HyperstimulationConflict', label: 'Hiperestimulação', icon: '🧠', category: 'emocional', condicaoExclusiva: 'TEA', desc: 'Gera estado de agitação e sobrecarga sensorial (Exclusivo TEA)' },
+  { id: 'GetDistractedTEAConflict', label: 'Distrair-se (TEA)', icon: '💭', category: 'atencao', condicaoExclusiva: 'TEA', desc: 'Perde o foco na aula com dispersão do espectro autista (Exclusivo TEA)' },
+  { id: 'DrawDistractedConflict', label: 'Desenhar distraído(a)', icon: '✏️', category: 'atencao', condicaoExclusiva: 'TDAH', desc: 'Fica rabiscando no caderno sem focar na aula (Exclusivo TDAH)' },
+  { id: 'BotherSomeoneConflict', label: 'Incomodar colegas', icon: '👉', category: 'social', condicaoExclusiva: 'TDAH', desc: 'Interrompe e mexe com colegas próximos (Exclusivo TDAH)' },
+  { id: 'GetMaterialWrongConflict', label: 'Pegar o material errado', icon: '❌', category: 'material', condicaoExclusiva: 'TDAH', desc: 'Tira da mochila itens não solicitados (Exclusivo TDAH)' },
+  { id: 'SitTogether', label: 'Sentar junto', icon: '🪑', category: 'social', condicaoExclusiva: null, desc: 'Muda de lugar para sentar próximo a outro aluno' },
+  { id: 'StandUp', label: 'Levantar-se', icon: '🧍', category: 'movimento', condicaoExclusiva: null, desc: 'Levanta-se da sua carteira na sala' },
+  { id: 'LeaveDesk', label: 'Sair da carteira', icon: '🚶', category: 'movimento', condicaoExclusiva: null, desc: 'Afasta-se do seu lugar e circula pela sala' },
+  { id: 'MoveToRandomPoint', label: 'Mover-se para ponto aleatório', icon: '🎲', category: 'movimento', condicaoExclusiva: null, desc: 'Desloca-se até um ponto qualquer da sala' },
+  { id: 'RunToRandomPoint', label: 'Correr para ponto aleatório', icon: '🏃', category: 'movimento', condicaoExclusiva: null, desc: 'Corre de forma desgovernada pela sala' },
+  { id: 'AnxiousRunToRandomPoint', label: 'Correr ansiosamente', icon: '😰', category: 'emocional', condicaoExclusiva: null, desc: 'Fuga ansiosa e agitada pela sala' },
+  { id: 'MoveToFrontDoor', label: 'Mover-se para a porta da frente', icon: '🚪', category: 'movimento', condicaoExclusiva: null, desc: 'Caminha em direção à porta de entrada' },
+  { id: 'GoToFloor', label: 'Sentar no chão', icon: '🧘', category: 'comportamento', condicaoExclusiva: null, desc: 'Senta-se no chão entre as carteiras' },
+  { id: 'ChangeSits', label: 'Trocar de assento (ChangeSeats)', icon: '🔄', category: 'movimento', condicaoExclusiva: null, desc: 'Troca de carteira com outro colega' },
+  { id: 'TakeMaterialOut', label: 'Pegar o material', icon: '📖', category: 'material', condicaoExclusiva: null, desc: 'Retira seu material da mochila' },
+  { id: 'Make Students Laugh', label: 'Fazer os alunos rirem', icon: '😄', category: 'social', condicaoExclusiva: null, desc: 'Conta piada ou faz brincadeira para a turma rir' },
   { id: 'Make Students Talk', label: 'Fazer os alunos falarem', icon: '🗣️', category: 'social', desc: 'Inicia conversa paralela em voz alta' },
 ]
 
@@ -1136,34 +1290,57 @@ let unsubFacilitadorPlus = null
 
 const salaId = computed(() => route.params.id)
 
-// Lista de Alunos 3D no VR (Lê estritamente de classroom_configs/${id}/Alunos)
+// Lista de Alunos 3D no VR (Lê estritamente de classroom_configs/${id}/Alunos com suporte a TEA / TDAH / Típico)
 const alunosVR = computed(() => {
   if (!sala.value) return []
-  const al = sala.value.Alunos
-  if (al) {
-    if (Array.isArray(al)) {
-      const items = al
-        .filter(Boolean)
-        .map((item, idx) => {
-          const nome = typeof item === 'string' ? item : (item?.nome || item?.name || '')
-          return { key: `Aluno${idx+1}`, nome: (nome || '').trim() }
-        })
-        .filter(item => item.nome.length > 0)
-      if (items.length > 0) return items
-    } else if (typeof al === 'object') {
-      const entries = Object.entries(al)
-        .map(([key, val]) => {
-          const nome = typeof val === 'string' ? val : (val?.nome || val?.name || '')
-          return { key, nome: (nome || '').trim() }
-        })
-        .filter(item => item.nome.length > 0)
-      if (entries.length > 0) return entries
-    }
-  }
-  
-  // Não cria alunos fictícios se o nó Alunos não estiver presente no óculos VR
-  return []
+  return parseAlunosVR(sala.value.Alunos)
 })
+
+// Filtros para seleção de alunos no VR
+const filtroCondicaoAlunoVR = ref('todos') // 'todos' | 'tea' | 'tdah' | 'tipico'
+const buscaAlunoVR = ref('')
+
+// Métricas consolidadas das condições dos alunos virtuais
+const metricasCondicoesVR = computed(() => {
+  return calcularMetricasCondicoesVR(alunosVR.value)
+})
+
+// Alunos VR filtrados pela aba de condição (TEA, TDAH, Típico) e busca por texto
+const alunosVRFiltrados = computed(() => {
+  let list = alunosVR.value
+
+  if (filtroCondicaoAlunoVR.value === 'tea') {
+    list = list.filter(a => a.isTEA)
+  } else if (filtroCondicaoAlunoVR.value === 'tdah') {
+    list = list.filter(a => a.isTDAH)
+  } else if (filtroCondicaoAlunoVR.value === 'tipico') {
+    list = list.filter(a => a.isTipico)
+  }
+
+  if (buscaAlunoVR.value.trim()) {
+    const q = buscaAlunoVR.value.toLowerCase().trim()
+    list = list.filter(a => 
+      a.nome.toLowerCase().includes(q) || 
+      a.key.toLowerCase().includes(q) ||
+      a.condicao.toLowerCase().includes(q)
+    )
+  }
+
+  return list
+})
+
+// Objeto completo do aluno alvo selecionado no momento
+const alunoAlvoObj = computed(() => {
+  if (!alunoAlvoSelecionado.value) return null
+  return alunosVR.value.find(a => a.nome === alunoAlvoSelecionado.value) || null
+})
+
+// Resgata a condição de um aluno virtual dado o seu nome
+const getCondicaoAlunoVR = (nome) => {
+  if (!nome) return null
+  const al = alunosVR.value.find(a => a.nome === nome)
+  return al ? al.condicao : null
+}
 
 const acaoSelecionadaObj = computed(() => {
   if (!acaoSelecionada.value) return null
@@ -1173,6 +1350,8 @@ const acaoSelecionadaObj = computed(() => {
 const categoriasAcoes = computed(() => {
   return [
     { id: 'todos', label: 'Todos', icon: '⚡', count: CONFLITOS_VR.length },
+    { id: 'tea', label: 'Exclusivos TEA', icon: '🧩', count: CONFLITOS_VR.filter(c => c.condicaoExclusiva === 'TEA').length },
+    { id: 'tdah', label: 'Exclusivos TDAH', icon: '⚡', count: CONFLITOS_VR.filter(c => c.condicaoExclusiva === 'TDAH').length },
     { id: 'atencao', label: 'Atenção & Foco', icon: '💭', count: CONFLITOS_VR.filter(c => c.category === 'atencao').length },
     { id: 'movimento', label: 'Movimentação', icon: '🏃', count: CONFLITOS_VR.filter(c => c.category === 'movimento').length },
     { id: 'material', label: 'Materiais', icon: '🎒', count: CONFLITOS_VR.filter(c => c.category === 'material').length },
@@ -1184,7 +1363,11 @@ const categoriasAcoes = computed(() => {
 const acoesFiltradas = computed(() => {
   let list = CONFLITOS_VR
   if (categoriaAcaoAtiva.value !== 'todos') {
-    if (categoriaAcaoAtiva.value === 'emocional') {
+    if (categoriaAcaoAtiva.value === 'tea') {
+      list = list.filter(c => c.condicaoExclusiva === 'TEA')
+    } else if (categoriaAcaoAtiva.value === 'tdah') {
+      list = list.filter(c => c.condicaoExclusiva === 'TDAH')
+    } else if (categoriaAcaoAtiva.value === 'emocional') {
       list = list.filter(c => c.category === 'emocional' || c.category === 'comportamento')
     } else {
       list = list.filter(c => c.category === categoriaAcaoAtiva.value)
@@ -1195,11 +1378,72 @@ const acoesFiltradas = computed(() => {
     list = list.filter(c => 
       c.label.toLowerCase().includes(q) || 
       c.id.toLowerCase().includes(q) || 
-      c.desc.toLowerCase().includes(q)
+      c.desc.toLowerCase().includes(q) ||
+      (c.condicaoExclusiva && c.condicaoExclusiva.toLowerCase().includes(q))
     )
   }
   return list
 })
+
+// Verifica se a ação está liberada para o aluno selecionado no momento
+const isAcaoDisponivelParaAluno = (acao) => {
+  if (!acao || !acao.condicaoExclusiva) return true
+  // Se nenhum aluno estiver selecionado ainda, ações exclusivas ficam bloqueadas
+  if (!alunoAlvoObj.value) return false
+  // Alunos típicos não podem receber ações exclusivas de TEA ou TDAH
+  if (alunoAlvoObj.value.isTipico) return false
+  // Exclusivas de TEA
+  if (acao.condicaoExclusiva === 'TEA') {
+    return alunoAlvoObj.value.isTEA === true
+  }
+  // Exclusivas de TDAH
+  if (acao.condicaoExclusiva === 'TDAH') {
+    return alunoAlvoObj.value.isTDAH === true
+  }
+  return false
+}
+
+// Retorna mensagem explicativa de bloqueio quando a ação não for permitida
+const getAcaoLockReason = (acao) => {
+  if (!acao || !acao.condicaoExclusiva) return ''
+  if (!alunoAlvoObj.value) {
+    return `Ação exclusiva para alunos com ${acao.condicaoExclusiva}. Selecione um aluno correspondente no Passo 1.`
+  }
+  if (alunoAlvoObj.value.isTipico) {
+    return `Indisponível: O aluno ${alunoAlvoObj.value.nome} é típico. Esta ação é exclusiva para alunos com ${acao.condicaoExclusiva}.`
+  }
+  if (acao.condicaoExclusiva === 'TEA' && !alunoAlvoObj.value.isTEA) {
+    return `Indisponível: Esta ação é exclusiva para alunos com TEA.`
+  }
+  if (acao.condicaoExclusiva === 'TDAH' && !alunoAlvoObj.value.isTDAH) {
+    return `Indisponível: Esta ação é exclusiva para alunos com TDAH.`
+  }
+  return ''
+}
+
+// Manipula o clique na ação prevenindo seleção de conflitos bloqueados
+const selecionarAcao = (acao) => {
+  if (!isSalaAtiva(sala.value) || !podeModificarEControlar.value) return
+  if (!isAcaoDisponivelParaAluno(acao)) {
+    const motivo = getAcaoLockReason(acao)
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: motivo || `Esta ação é exclusiva para alunos com ${acao.condicaoExclusiva}.`
+    }
+    return
+  }
+  acaoSelecionada.value = acao.id
+}
+
+// Se o usuário trocar para um aluno que não tem a condição da ação selecionada, limpa a ação
+watch(
+  () => alunoAlvoSelecionado.value,
+  () => {
+    if (acaoSelecionadaObj.value && !isAcaoDisponivelParaAluno(acaoSelecionadaObj.value)) {
+      acaoSelecionada.value = ''
+    }
+  }
+)
 
 const historicoComandos = computed(() => {
   if (!sala.value || !sala.value.comando_facilitador) return []
@@ -1215,7 +1459,13 @@ const historicoComandos = computed(() => {
 
 const getNomeConflito = (tipoId) => {
   const c = CONFLITOS_VR.find(item => item.id === tipoId)
-  return c ? c.label : tipoId
+  if (c) return c.label
+  if (tipoId === 'Hyperstimulate' || tipoId === 'HyperstimulationConflict') return 'Hiperestimulação'
+  if (tipoId === 'GetDistracted' || tipoId === 'GetDistractedTEAConflict') return 'Distrair-se (TEA)'
+  if (tipoId === 'BotherRandomStudents' || tipoId === 'BotherSomeoneConflict') return 'Incomodar colegas'
+  if (tipoId === 'DrawDistracted' || tipoId === 'DrawDistractedConflict') return 'Desenhar distraído(a)'
+  if (tipoId === 'GetOutMaterialWrong' || tipoId === 'GetMaterialWrongConflict') return 'Pegar o material errado'
+  return tipoId
 }
 
 const formatHoraComando = (timestamp) => {
@@ -1255,6 +1505,15 @@ const enviarComandoVR = async () => {
     feedbackComando.value = {
       tipo: 'error',
       texto: 'Por favor, selecione a ação ou conflito no Passo 2.'
+    }
+    return
+  }
+
+  if (acaoSelecionadaObj.value && !isAcaoDisponivelParaAluno(acaoSelecionadaObj.value)) {
+    const motivo = getAcaoLockReason(acaoSelecionadaObj.value)
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: motivo || `Ação exclusiva para alunos com ${acaoSelecionadaObj.value.condicaoExclusiva}.`
     }
     return
   }
@@ -3597,12 +3856,19 @@ onUnmounted(() => {
 
 .vr-students-count-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   padding: 6px 14px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
+}
+
+.count-main-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .vr-students-count-chip .count-num {
@@ -3617,6 +3883,32 @@ onUnmounted(() => {
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.count-cond-pills {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cond-pill-mini {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.cond-pill-mini.cond-tea {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.cond-pill-mini.cond-tdah {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
 }
 
 .vr-interact-locked-banner {
@@ -3710,18 +4002,42 @@ onUnmounted(() => {
 .selected-target-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: 8px;
+  padding: 4px 14px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   border-radius: 9999px;
   color: #1d4ed8;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
 }
 
 .selected-target-pill strong {
   font-weight: 800;
   color: #0071e3;
+}
+
+.pill-cond-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pill-cond-badge.cond-tea {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.pill-cond-badge.cond-tdah {
+  background: #d97706;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.35);
 }
 
 .pending-target-pill {
@@ -3730,10 +4046,147 @@ onUnmounted(() => {
   font-style: italic;
 }
 
+/* Barra de Filtros e Busca dos Alunos Virtuais */
+.vr-students-filter-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.vr-condition-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cond-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cond-tab-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.cond-tab-btn.active {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2);
+}
+
+.cond-tab-btn.tab-tea.active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.cond-tab-btn.tab-tdah.active {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  border-color: #d97706;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+}
+
+.cond-tab-btn.tab-tipico.active {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.cond-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+}
+
+.cond-tab-btn.active .cond-tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.vr-students-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 6px 10px;
+  min-width: 220px;
+  transition: all 0.2s;
+}
+
+.vr-students-search-box:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.mini-search-svg {
+  width: 15px;
+  height: 15px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.mini-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.8rem;
+  color: #1e293b;
+  width: 100%;
+}
+
+.mini-clear-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.mini-clear-btn:hover {
+  color: #ef4444;
+}
+
 /* Chips de Alunos 3D */
 .vr-target-students-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
   gap: 12px;
 }
 
@@ -3752,14 +4205,20 @@ onUnmounted(() => {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
 }
 
-.vr-student-target-btn:hover:not(:disabled) {
+/* 1. Aluno Típico (Simples, limpo e neutro como era antes) */
+.vr-student-target-btn.is-typical-target {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+}
+
+.vr-student-target-btn.is-typical-target:not(.is-selected):hover:not(:disabled) {
   border-color: #6366f1;
   background: #fbfbfe;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.12);
 }
 
-.vr-student-target-btn.is-selected {
+.vr-student-target-btn.is-typical-target.is-selected {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border-color: #4f46e5;
   color: #ffffff;
@@ -3767,9 +4226,91 @@ onUnmounted(() => {
   transform: translateY(-2px);
 }
 
+.vr-student-target-btn.is-typical-target.is-selected:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+  border-color: #3730a3;
+  color: #ffffff;
+  box-shadow: 0 8px 26px rgba(79, 70, 229, 0.5);
+  transform: translateY(-3px);
+}
+
+/* 2. Aluno com TEA (Destaque Visual Máximo em Azul Royal com Tarja Lateral) */
+.vr-student-target-btn.is-tea-target {
+  border: 1.5px solid #93c5fd;
+  border-left: 5px solid #2563eb;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.16);
+}
+
+.vr-student-target-btn.is-tea-target:not(.is-selected):hover:not(:disabled) {
+  border-color: #3b82f6;
+  border-left-color: #1d4ed8;
+  background: #eff6ff;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
+  transform: translateY(-3px);
+}
+
+.vr-student-target-btn.is-tea-target.is-selected {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  border-color: #1e40af;
+  border-left: 5px solid #60a5fa;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.45);
+  transform: translateY(-3px);
+}
+
+.vr-student-target-btn.is-tea-target.is-selected:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  border-color: #172554;
+  border-left: 5px solid #93c5fd;
+  color: #ffffff;
+  box-shadow: 0 10px 28px rgba(29, 78, 216, 0.6);
+  transform: translateY(-3px);
+}
+
+/* 3. Aluno com TDAH (Destaque Visual Máximo em Âmbar/Laranja com Tarja Lateral) */
+.vr-student-target-btn.is-tdah-target {
+  border: 1.5px solid #fcd34d;
+  border-left: 5px solid #f59e0b;
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+}
+
+.vr-student-target-btn.is-tdah-target:not(.is-selected):hover:not(:disabled) {
+  border-color: #f59e0b;
+  border-left-color: #d97706;
+  background: #fef3c7;
+  box-shadow: 0 8px 22px rgba(217, 119, 6, 0.28);
+  transform: translateY(-3px);
+}
+
+.vr-student-target-btn.is-tdah-target.is-selected {
+  background: linear-gradient(135deg, #d97706 0%, #ea580c 100%);
+  border-color: #b45309;
+  border-left: 5px solid #fde68a;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.45);
+  transform: translateY(-3px);
+}
+
+.vr-student-target-btn.is-tdah-target.is-selected:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b45309 0%, #c2410c 100%);
+  border-color: #78350f;
+  border-left: 5px solid #fef08a;
+  color: #ffffff;
+  box-shadow: 0 10px 28px rgba(217, 119, 6, 0.6);
+  transform: translateY(-3px);
+}
+
+/* Avatar dos Alunos */
+.target-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .target-avatar {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: #e0e7ff;
   color: #4338ca;
@@ -3778,19 +4319,53 @@ onUnmounted(() => {
   justify-content: center;
   font-weight: 800;
   font-size: 0.95rem;
-  flex-shrink: 0;
   transition: all 0.2s;
 }
 
-.vr-student-target-btn.is-selected .target-avatar {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+.is-tea-target .target-avatar {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 2px solid #bfdbfe;
+}
+
+.is-tdah-target .target-avatar {
+  background: #fef3c7;
+  color: #b45309;
+  border: 2px solid #fde68a;
+}
+
+.vr-student-target-btn.is-selected .target-avatar,
+.vr-student-target-btn.is-selected:hover .target-avatar {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.avatar-cond-dot {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-size: 0.76rem;
+  line-height: 1;
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 2px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.dot-tea {
+  border: 1px solid #bfdbfe;
+}
+
+.dot-tdah {
+  border: 1px solid #fde68a;
 }
 
 .target-name-wrap {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 3px;
 }
 
 .target-name {
@@ -3801,13 +4376,69 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.target-slot-code {
-  font-size: 0.7rem;
-  color: #64748b;
+.is-tea-target:not(.is-selected) .target-name {
+  color: #1e3a8a;
 }
 
-.vr-student-target-btn.is-selected .target-slot-code {
-  color: rgba(255, 255, 255, 0.8);
+.is-tdah-target:not(.is-selected) .target-name {
+  color: #78350f;
+}
+
+.vr-student-target-btn.is-selected .target-name,
+.vr-student-target-btn.is-selected:hover .target-name {
+  color: #ffffff !important;
+}
+
+.target-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.target-slot-code {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.vr-student-target-btn.is-selected .target-slot-code,
+.vr-student-target-btn.is-selected:hover .target-slot-code {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Badges Fortes e Chamativos para TEA e TDAH */
+.student-neuro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.student-neuro-badge.badge-tea {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+}
+
+.student-neuro-badge.badge-tdah {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.4);
+}
+
+.vr-student-target-btn.is-selected .student-neuro-badge,
+.vr-student-target-btn.is-selected:hover .student-neuro-badge {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
 }
 
 .target-check-badge {
@@ -3826,6 +4457,111 @@ onUnmounted(() => {
   font-weight: 900;
   border: 2px solid #ffffff;
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vr-student-target-btn.is-selected:hover .target-check-badge {
+  transform: scale(1.15);
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.6);
+}
+
+.empty-vr-filter-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.empty-filter-text {
+  font-size: 0.86rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.btn-clear-vr-filter {
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #4f46e5;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-clear-vr-filter:hover {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+
+.summary-val-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-cond-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.summary-cond-pill.cond-tea {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.summary-cond-pill.cond-tdah {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+}
+
+.feed-aluno-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feed-aluno-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.feed-cond-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 5px;
+  text-transform: uppercase;
+}
+
+.feed-cond-tag.cond-tea {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.feed-cond-tag.cond-tdah {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
 }
 
 .empty-vr-students-warn {
@@ -4004,7 +4740,7 @@ onUnmounted(() => {
   position: relative;
 }
 
-.action-choice-card:hover:not(.card-disabled) {
+.action-choice-card:hover:not(.card-disabled):not(.is-condition-locked) {
   border-color: #6366f1;
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
@@ -4017,14 +4753,122 @@ onUnmounted(() => {
   transform: translateY(-3px);
 }
 
+/* Ação Exclusiva TEA Habilitada */
+.action-choice-card.is-exclusive-tea:not(.is-condition-locked) {
+  border-left: 4.5px solid #2563eb;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.1);
+}
+
+.action-choice-card.is-exclusive-tea:not(.is-condition-locked):hover {
+  border-color: #2563eb;
+  border-left-color: #1d4ed8;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+}
+
+/* Ação Exclusiva TDAH Habilitada */
+.action-choice-card.is-exclusive-tdah:not(.is-condition-locked) {
+  border-left: 4.5px solid #f59e0b;
+  background: linear-gradient(135deg, #ffffff 0%, #fffdf5 100%);
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.1);
+}
+
+.action-choice-card.is-exclusive-tdah:not(.is-condition-locked):hover {
+  border-color: #f59e0b;
+  border-left-color: #d97706;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+}
+
+/* Card Bloqueado por Condição (Translúcido / Desabilitado para Aluno Típico ou Incompatível) */
+.action-choice-card.is-condition-locked {
+  opacity: 0.38 !important;
+  filter: grayscale(40%);
+  background: #f8fafc !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.action-choice-card.is-condition-locked:hover {
+  opacity: 0.52 !important;
+  border-color: #94a3b8 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.action-choice-card.is-condition-locked .action-emoji-symbol {
+  filter: grayscale(80%);
+}
+
 .action-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.action-top-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .action-emoji-symbol {
   font-size: 1.7rem;
+  line-height: 1;
+}
+
+/* Badges Exclusivos TEA e TDAH */
+.action-exclusive-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+.action-exclusive-badge.badge-tea {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.action-choice-card:not(.is-condition-locked) .action-exclusive-badge.badge-tea {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.action-exclusive-badge.badge-tdah {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+}
+
+.action-choice-card:not(.is-condition-locked) .action-exclusive-badge.badge-tdah {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.action-lock-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .action-selected-tag {
@@ -4055,6 +4899,18 @@ onUnmounted(() => {
 
 .action-card-footer {
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.action-lock-hint {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-style: italic;
+  font-weight: 600;
 }
 
 .action-code-tag {
@@ -4079,6 +4935,17 @@ onUnmounted(() => {
   text-align: center;
   color: #94a3b8;
   font-size: 0.9rem;
+}
+
+/* Category Pills para TEA e TDAH */
+.cat-pill.cat-pill-tea.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.cat-pill.cat-pill-tdah.active {
+  background: #d97706;
+  border-color: #d97706;
 }
 
 /* Feedback Toast */

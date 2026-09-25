@@ -245,7 +245,15 @@
                 </div>
                 <div class="spec-row-item">
                   <span class="s-label">Alunos Virtuais 3D:</span>
-                  <span class="s-val">{{ (salaSelecionada.numBoys || 0) + (salaSelecionada.numGirls || 0) }} ({{ salaSelecionada.numBoys || 0 }}👦 / {{ salaSelecionada.numGirls || 0 }}👧)</span>
+                  <span class="s-val">
+                    {{ alunosVRSalaSelecionada.length > 0 ? alunosVRSalaSelecionada.length : ((salaSelecionada.numBoys || 0) + (salaSelecionada.numGirls || 0)) }}
+                    <template v-if="alunosVRSalaSelecionada.length > 0 && (metricasCondicoesSalaSelecionada.tea > 0 || metricasCondicoesSalaSelecionada.tdah > 0)">
+                      ({{ metricasCondicoesSalaSelecionada.tea }} TEA / {{ metricasCondicoesSalaSelecionada.tdah }} TDAH)
+                    </template>
+                    <template v-else>
+                      ({{ salaSelecionada.numBoys || 0 }}👦 / {{ salaSelecionada.numGirls || 0 }}👧)
+                    </template>
+                  </span>
                 </div>
                 <div class="spec-row-item">
                   <span class="s-label">Fileiras x Colunas:</span>
@@ -298,7 +306,7 @@
               <div class="students-scroll-panel" v-if="salaSelecionada.alunosVinculados.length > 0">
                 <div 
                   v-for="aluno in salaSelecionada.alunosVinculados" 
-                  :key="aluno.id"
+                  :key="aluno.id" 
                   :class="['student-row-tag', { 'is-played': salaSelecionada.participantesUnicosIds.includes(aluno.id) }]"
                 >
                   <div class="s-row-avatar notranslate" translate="no">{{ (aluno.nome || 'A').charAt(0).toUpperCase() }}</div>
@@ -314,6 +322,67 @@
               <p v-else class="empty-hint-text">Nenhum aluno vinculado a esta sala.</p>
             </div>
 
+          </div>
+
+          <!-- Painel dos Alunos Virtuais 3D (Cenário VR) com indicação de TEA, TDAH e Típicos -->
+          <div v-if="alunosVRSalaSelecionada.length > 0" class="glass-card vr-virtual-students-panel">
+            <div class="virtual-panel-header">
+              <div class="virtual-header-left">
+                <span class="sub-card-icon">🥽</span>
+                <div class="sub-card-title-group">
+                  <h4 class="sub-card-title">Alunos Virtuais do Cenário VR</h4>
+                  <span class="sub-count">({{ alunosVRSalaSelecionada.length }} alunos)</span>
+                </div>
+              </div>
+              <div class="virtual-header-badges">
+                <span v-if="metricasCondicoesSalaSelecionada.tea > 0" class="virtual-cond-badge cond-tea">
+                  🧩 {{ metricasCondicoesSalaSelecionada.tea }} com TEA
+                </span>
+                <span v-if="metricasCondicoesSalaSelecionada.tdah > 0" class="virtual-cond-badge cond-tdah">
+                  ⚡ {{ metricasCondicoesSalaSelecionada.tdah }} com TDAH
+                </span>
+              </div>
+            </div>
+
+            <p class="virtual-panel-hint">
+              Alunos virtuais 3D que compõem as carteiras desta simulação no óculos VR:
+            </p>
+
+            <div class="virtual-students-chips-grid">
+              <div
+                v-for="aluno in alunosVRSalaSelecionada"
+                :key="aluno.key"
+                class="virtual-student-card notranslate"
+                translate="no"
+                :class="{
+                  'is-tea': aluno.isTEA,
+                  'is-tdah': aluno.isTDAH,
+                  'is-tipico': aluno.isTipico
+                }"
+              >
+                <!-- Avatar com indicador visual para TEA e TDAH -->
+                <div class="v-avatar-wrapper">
+                  <div class="v-avatar">
+                    {{ (aluno.nome || 'A').charAt(0).toUpperCase() }}
+                  </div>
+                  <span v-if="aluno.isTEA" class="v-avatar-cond-dot dot-tea" title="TEA">🧩</span>
+                  <span v-else-if="aluno.isTDAH" class="v-avatar-cond-dot dot-tdah" title="TDAH">⚡</span>
+                </div>
+
+                <div class="v-info">
+                  <span class="v-name">{{ aluno.nome }}</span>
+                  <span class="v-slot">{{ aluno.key }}</span>
+                </div>
+
+                <!-- Apenas Alunos com TEA ou TDAH recebem aviso/badge chamativo; típicos permanecem limpos sem aviso -->
+                <span v-if="aluno.isTEA" class="v-badge cond-tea">
+                  🧩 TEA
+                </span>
+                <span v-else-if="aluno.isTDAH" class="v-badge cond-tdah">
+                  ⚡ TDAH
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- Seção de Sessões Realizadas na Sala Selecionada -->
@@ -551,6 +620,7 @@ import { database } from '../firebase'
 import { ref as dbRef, remove } from 'firebase/database'
 import { useAuthStore } from '../stores/auth'
 import { isSalaAtiva, getSituacaoLabel } from '../utils/salaUtils'
+import { parseAlunosVR, calcularMetricasCondicoesVR, getCondicaoBadgeMeta } from '../utils/alunosVRUtils'
 
 import MenuLateral from '../components/generic/MenuLateral.vue'
 import { 
@@ -566,6 +636,15 @@ const userData = ref({})
 
 const minhasSalas = ref([])
 const salaSelecionada = ref(null)
+
+const alunosVRSalaSelecionada = computed(() => {
+  if (!salaSelecionada.value) return []
+  return parseAlunosVR(salaSelecionada.value.Alunos)
+})
+
+const metricasCondicoesSalaSelecionada = computed(() => {
+  return calcularMetricasCondicoesVR(alunosVRSalaSelecionada.value)
+})
 
 const filtroBusca = ref('')
 const filtroStatus = ref('todas') // 'todas' | 'com_sessoes' | 'sem_sessoes'
@@ -1396,6 +1475,215 @@ onMounted(async () => {
 
 .badge-ok { background: #d1fae5; color: #059669; }
 .badge-pending { background: #f1f5f9; color: #94a3b8; }
+
+/* Painel dos Alunos Virtuais 3D com indicação de TEA, TDAH e Típico */
+.vr-virtual-students-panel {
+  margin-top: 16px;
+  padding: 20px 24px;
+}
+
+.virtual-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.virtual-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.virtual-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.virtual-cond-badge {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.virtual-cond-badge.cond-tea {
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  color: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+
+.virtual-cond-badge.cond-tdah {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  color: #b45309;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.12);
+}
+
+.virtual-panel-hint {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0 0 16px 0;
+}
+
+.virtual-students-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.virtual-student-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.virtual-student-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+/* Aluno Típico (Simples e Neutro) */
+.virtual-student-card.is-tipico {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+}
+
+/* Aluno com TEA (Destaque Visual Máximo com Tarja Azul) */
+.virtual-student-card.is-tea {
+  border: 1.5px solid #93c5fd;
+  border-left: 4.5px solid #2563eb;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+
+.virtual-student-card.is-tea .v-name {
+  color: #1e3a8a;
+}
+
+/* Aluno com TDAH (Destaque Visual Máximo com Tarja Âmbar) */
+.virtual-student-card.is-tdah {
+  border: 1.5px solid #fcd34d;
+  border-left: 4.5px solid #f59e0b;
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+}
+
+.virtual-student-card.is-tdah .v-name {
+  color: #78350f;
+}
+
+/* Wrapper e Avatar */
+.v-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.v-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+}
+
+.virtual-student-card.is-tea .v-avatar {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1.5px solid #bfdbfe;
+}
+
+.virtual-student-card.is-tdah .v-avatar {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1.5px solid #fde68a;
+}
+
+.v-avatar-cond-dot {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-size: 0.7rem;
+  line-height: 1;
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 2px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.v-avatar-cond-dot.dot-tea {
+  border: 1px solid #bfdbfe;
+}
+
+.v-avatar-cond-dot.dot-tdah {
+  border: 1px solid #fde68a;
+}
+
+.v-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.v-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v-slot {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Badges Fortes e Chamativos para TEA e TDAH */
+.v-badge {
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.v-badge.cond-tea {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.v-badge.cond-tdah {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
+}
 
 /* Sessions Detail Section */
 .sessions-detail-section {
