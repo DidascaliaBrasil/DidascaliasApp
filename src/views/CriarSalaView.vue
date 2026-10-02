@@ -200,6 +200,22 @@
 
               <div class="input-group-glass">
                 <label class="input-label-glass">
+                  <span class="label-icon">🧩</span>
+                  Alunos TEA (numTEA)
+                </label>
+                <input type="number" v-model.number="form.numTEA" class="glass-input-field" min="0" required />
+              </div>
+
+              <div class="input-group-glass">
+                <label class="input-label-glass">
+                  <span class="label-icon">⚡</span>
+                  Alunos TDAH (numADHD)
+                </label>
+                <input type="number" v-model.number="form.numADHD" class="glass-input-field" min="0" required />
+              </div>
+
+              <div class="input-group-glass">
+                <label class="input-label-glass">
                   <span class="label-icon">🪑</span>
                   Mesas (numDesks)
                 </label>
@@ -334,6 +350,8 @@
                       <span class="param-tag">🪑 <strong>{{ modelo.numDesks || 0 }}</strong> mesas</span>
                       <span class="param-tag">👦 <strong>{{ modelo.numBoys || 0 }}</strong> meninos</span>
                       <span class="param-tag">👧 <strong>{{ modelo.numGirls || 0 }}</strong> meninas</span>
+                      <span v-if="modelo.numTEA" class="param-tag param-tea">🧩 <strong>{{ modelo.numTEA }}</strong> TEA</span>
+                      <span v-if="modelo.numADHD" class="param-tag param-adhd">⚡ <strong>{{ modelo.numADHD }}</strong> TDAH</span>
                       <span v-if="Number(modelo.shape) === 0" class="param-tag">↔️ {{ modelo.rows || 0 }}x{{ modelo.cols || 0 }}</span>
                       <span v-if="Number(modelo.shape) === 1" class="param-tag">🏛️ Max: {{ modelo.maxDesksInSemiCircle || 0 }}</span>
                       <span v-if="modelo.radius" class="param-tag">⭕ Raio: {{ modelo.radius }}m</span>
@@ -379,6 +397,8 @@
                       <span class="param-tag">🪑 <strong>{{ modelo.numDesks }}</strong> mesas</span>
                       <span class="param-tag">👦 <strong>{{ modelo.numBoys }}</strong> meninos</span>
                       <span class="param-tag">👧 <strong>{{ modelo.numGirls }}</strong> meninas</span>
+                      <span v-if="modelo.numTEA" class="param-tag param-tea">🧩 <strong>{{ modelo.numTEA }}</strong> TEA</span>
+                      <span v-if="modelo.numADHD" class="param-tag param-adhd">⚡ <strong>{{ modelo.numADHD }}</strong> TDAH</span>
                       <span v-if="Number(modelo.shape) === 0" class="param-tag">↔️ {{ modelo.rows }}x{{ modelo.cols }}</span>
                       <span v-if="Number(modelo.shape) === 1" class="param-tag">🏛️ Max: {{ modelo.maxDesksInSemiCircle }}</span>
                       <span v-if="modelo.radius" class="param-tag">⭕ Raio: {{ modelo.radius }}m</span>
@@ -459,6 +479,10 @@
                   <div class="preview-item">
                     <span class="item-label">Meninos / Meninas:</span>
                     <span class="item-value">{{ form.numBoys }} / {{ form.numGirls }}</span>
+                  </div>
+                  <div class="preview-item">
+                    <span class="item-label">TEA / TDAH:</span>
+                    <span class="item-value">{{ form.numTEA || 0 }} TEA / {{ form.numADHD || 0 }} TDAH</span>
                   </div>
                   <div class="preview-item" v-if="Number(form.shape) === 0">
                     <span class="item-label">Fileiras x Colunas:</span>
@@ -585,6 +609,8 @@ const modelosPadrao = [
     numBoys: 10,
     numGirls: 10,
     numDesks: 20,
+    numTEA: 1,
+    numADHD: 1,
     rows: 4,
     cols: 5,
     radius: 10,
@@ -599,6 +625,8 @@ const modelosPadrao = [
     numBoys: 12,
     numGirls: 12,
     numDesks: 24,
+    numTEA: 2,
+    numADHD: 1,
     rows: 3,
     cols: 8,
     radius: 12,
@@ -613,6 +641,8 @@ const modelosPadrao = [
     numBoys: 8,
     numGirls: 8,
     numDesks: 16,
+    numTEA: 1,
+    numADHD: 2,
     rows: 1,
     cols: 16,
     radius: 8,
@@ -627,6 +657,8 @@ const form = reactive({
   numBoys: 0,
   numGirls: 0,
   numDesks: 0,
+  numTEA: 0,
+  numADHD: 0,
   shape: 0,
   rows: 0,
   cols: 0,
@@ -799,6 +831,8 @@ const salvarModeloConfirmado = async () => {
       numBoys: Number(form.numBoys || 0),
       numGirls: Number(form.numGirls || 0),
       numDesks: Number(form.numDesks || 0),
+      numTEA: Number(form.numTEA || 0),
+      numADHD: Number(form.numADHD || 0),
       rows: Number(form.rows || 0),
       cols: Number(form.cols || 0),
       radius: Number(form.radius || 0),
@@ -869,6 +903,8 @@ const aplicarModelo = (modelo) => {
   form.numBoys = Number(modelo.numBoys ?? 0)
   form.numGirls = Number(modelo.numGirls ?? 0)
   form.numDesks = Number(modelo.numDesks ?? 0)
+  form.numTEA = Number(modelo.numTEA ?? 0)
+  form.numADHD = Number(modelo.numADHD ?? 0)
   form.rows = Number(modelo.rows ?? 0)
   form.cols = Number(modelo.cols ?? 0)
   form.radius = Number(modelo.radius ?? 10)
@@ -944,9 +980,11 @@ const salvarConfiguracao = async () => {
         ativo: "nao"
       },
       
-      numBoys: form.numBoys,
-      numGirls: form.numGirls,
-      numDesks: form.numDesks,
+      numBoys: Number(form.numBoys || 0),
+      numGirls: Number(form.numGirls || 0),
+      numDesks: Number(form.numDesks || 0),
+      numTEA: Number(form.numTEA || 0),
+      numADHD: Number(form.numADHD || 0),
       shape: form.shape,
       rows: form.rows,
       cols: form.cols,
@@ -1718,6 +1756,18 @@ const salvarConfiguracao = async () => {
   font-size: 0.76rem;
   font-weight: 600;
   color: #334155;
+}
+
+.param-tag.param-tea {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #7c3aed;
+}
+
+.param-tag.param-adhd {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #d97706;
 }
 
 .model-card-footer {

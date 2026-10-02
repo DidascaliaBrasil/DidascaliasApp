@@ -183,6 +183,8 @@
           <div class="sala-chips-row">
             <span class="chip-info">Mesas: {{ sala.numDesks || 0 }}</span>
             <span class="chip-info">Alunos: {{ (sala.numBoys || 0) + (sala.numGirls || 0) }}</span>
+            <span v-if="sala.numTEA" class="chip-info">🧩 {{ sala.numTEA }} TEA</span>
+            <span v-if="sala.numADHD" class="chip-info">⚡ {{ sala.numADHD }} TDAH</span>
           </div>
 
           <div class="sala-footer-status">

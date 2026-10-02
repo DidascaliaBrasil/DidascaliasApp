@@ -133,7 +133,7 @@
               </div>
               <div class="telem-data">
                 <span class="telem-label">CAPACIDADE TOTAL</span>
-                <span class="telem-value">{{ (sala.numBoys || 0) + (sala.numGirls || 0) }} alunos ({{ sala.numBoys || 0 }} 👦 • {{ sala.numGirls || 0 }} 👧)</span>
+                <span class="telem-value">{{ (sala.numBoys || 0) + (sala.numGirls || 0) }} alunos ({{ sala.numBoys || 0 }} 👦 • {{ sala.numGirls || 0 }} 👧<template v-if="(sala.numTEA || 0) > 0"> • 🧩 {{ sala.numTEA }} TEA</template><template v-if="(sala.numADHD || 0) > 0"> • ⚡ {{ sala.numADHD }} TDAH</template>)</span>
               </div>
             </div>
 
@@ -930,7 +930,7 @@
                   <button
                     type="button"
                     class="btn-dispatch-command"
-                    :disabled="enviandoComando || !isSalaAtiva(sala) || !podeModificarEControlar || !acaoSelecionada || !alunoAlvoSelecionado || (acaoSelecionadaObj && !isAcaoDisponivelParaAluno(acaoSelecionadaObj)) || alunosVR.length === 0"
+                    :disabled="enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !acaoSelecionada || !alunoAlvoSelecionado || (acaoSelecionadaObj && !isAcaoDisponivelParaAluno(acaoSelecionadaObj)) || alunosVR.length === 0"
                     @click="enviarComandoVR"
                   >
                     <span v-if="enviandoComando" class="btn-spinner-tech"></span>
@@ -941,6 +941,69 @@
                       {{ enviandoComando ? 'Transmitindo para o Óculos...' : !isSalaAtiva(sala) ? 'Interação Bloqueada (Sala Inativa)' : (!podeModificarEControlar ? 'Controle Bloqueado (Requer FacilitadorPlus)' : (alunosVR.length === 0 ? 'Alunos n encontrados' : 'Enviar Comando para o Óculos VR')) }}
                     </span>
                   </button>
+                </div>
+
+                <!-- BARRA DE REINICIALIZAÇÃO (BOTÕES VERMELHOS DE RESET VR) -->
+                <div class="command-reset-bar">
+                  <div class="reset-bar-header">
+                    <div class="reset-header-left">
+                      <span class="reset-header-icon">🔄</span>
+                      <div class="reset-header-text">
+                        <span class="reset-header-title">Comandos de Reinicialização no VR</span>
+                        <span class="reset-header-desc">Restaure o comportamento inicial/neutro dos estudantes na simulação</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="reset-buttons-grid">
+                    <!-- Botão 1: Reiniciar Estudante Selecionado -->
+                    <button
+                      type="button"
+                      class="btn-vr-danger btn-reset-single"
+                      :disabled="enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado || alunosVR.length === 0"
+                      @click="reiniciarEstudanteSelecionado"
+                      :title="!alunoAlvoSelecionado ? 'Selecione um estudante no Passo 1 para reiniciar' : `Reiniciar comportamento de ${alunoAlvoSelecionado} no VR`"
+                    >
+                      <span v-if="enviandoReset === 'single'" class="btn-spinner-tech"></span>
+                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="reset-btn-svg">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                        <path d="M4 4v5h5"></path>
+                        <path d="M4 9a8 8 0 0 1 14.14-3.14"></path>
+                      </svg>
+                      <div class="btn-reset-content">
+                        <span class="btn-reset-title">Reiniciar Estudante Selecionado</span>
+                        <span class="btn-reset-subtitle notranslate" translate="no">
+                          {{ alunoAlvoSelecionado ? `Alvo: ${alunoAlvoSelecionado}` : '(Selecione no Passo 1)' }}
+                        </span>
+                      </div>
+                    </button>
+
+                    <!-- Botão 2: Reiniciar Todos Estudantes -->
+                    <button
+                      type="button"
+                      class="btn-vr-danger btn-reset-all"
+                      :disabled="enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || alunosVR.length === 0"
+                      @click="reiniciarTodosEstudantes"
+                      title="Reiniciar todos os estudantes virtuais da sala para o estado inicial"
+                    >
+                      <span v-if="enviandoReset === 'all'" class="btn-spinner-tech"></span>
+                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="reset-btn-svg">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        <path d="M21 8V3h-5"></path>
+                        <path d="M21 3l-6 6"></path>
+                      </svg>
+                      <div class="btn-reset-content">
+                        <span class="btn-reset-title">Reiniciar Todos Estudantes</span>
+                        <span class="btn-reset-subtitle">
+                          {{ alunosVR.length > 0 ? `Todos os ${alunosVR.length} alunos virtuais` : 'Turma completa' }}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- FEED / HISTÓRICO DE COMANDOS RECENTES DISPARADOS -->
@@ -954,23 +1017,26 @@
                       v-for="cmd in historicoComandos"
                       :key="cmd.key"
                       class="command-feed-item"
+                      :class="{ 'is-reset-item': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }"
                     >
                       <div class="feed-item-left">
-                        <span class="feed-status-dot"></span>
+                        <span class="feed-status-dot" :class="{ 'dot-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }"></span>
                         <span class="feed-time">{{ formatHoraComando(cmd.timestamp) }}</span>
-                        <div class="feed-aluno-pill notranslate" translate="no">
-                          <span class="feed-aluno-name">{{ cmd.aluno_alvo }}</span>
-                          <span v-if="getCondicaoAlunoVR(cmd.aluno_alvo) && (getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' || getCondicaoAlunoVR(cmd.aluno_alvo) === 'TDAH')" :class="['feed-cond-tag', getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? 'cond-tea' : 'cond-tdah']">
+                        <div class="feed-aluno-pill notranslate" translate="no" :class="{ 'all-students-pill': !cmd.aluno_alvo }">
+                          <span class="feed-aluno-name">{{ cmd.aluno_alvo || 'Todos os Estudantes' }}</span>
+                          <span v-if="cmd.aluno_alvo && getCondicaoAlunoVR(cmd.aluno_alvo) && (getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' || getCondicaoAlunoVR(cmd.aluno_alvo) === 'TDAH')" :class="['feed-cond-tag', getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? 'cond-tea' : 'cond-tdah']">
                             {{ getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? '🧩 TEA' : '⚡ TDAH' }}
                           </span>
                         </div>
                         <span class="feed-arrow">→</span>
-                        <span class="feed-conflito">
+                        <span class="feed-conflito" :class="{ 'conflito-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }">
                           {{ getNomeConflito(cmd.tipo_conflito) }}
                           <code class="feed-code">({{ cmd.tipo_conflito }})</code>
                         </span>
                       </div>
-                      <span class="feed-check-tag">✓ No VR</span>
+                      <span class="feed-check-tag" :class="{ 'check-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }">
+                        {{ cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' ? '🔄 Reset VR' : '✓ No VR' }}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1208,7 +1274,7 @@ const CONFLITOS_VR = [
   { id: 'DrawDistractedConflict', label: 'Desenhar distraído(a)', icon: '✏️', category: 'atencao', condicaoExclusiva: 'TDAH', desc: 'Fica rabiscando no caderno sem focar na aula (Exclusivo TDAH)' },
   { id: 'BotherSomeoneConflict', label: 'Incomodar colegas', icon: '👉', category: 'social', condicaoExclusiva: 'TDAH', desc: 'Interrompe e mexe com colegas próximos (Exclusivo TDAH)' },
   { id: 'GetMaterialWrongConflict', label: 'Pegar o material errado', icon: '❌', category: 'material', condicaoExclusiva: 'TDAH', desc: 'Tira da mochila itens não solicitados (Exclusivo TDAH)' },
-  { id: 'SitTogether', label: 'Sentar junto', icon: '🪑', category: 'social', condicaoExclusiva: null, desc: 'Muda de lugar para sentar próximo a outro aluno' },
+  /*{ id: 'SitTogether', label: 'Sentar junto', icon: '🪑', category: 'social', condicaoExclusiva: null, desc: 'Muda de lugar para sentar próximo a outro aluno' },
   { id: 'StandUp', label: 'Levantar-se', icon: '🧍', category: 'movimento', condicaoExclusiva: null, desc: 'Levanta-se da sua carteira na sala' },
   { id: 'LeaveDesk', label: 'Sair da carteira', icon: '🚶', category: 'movimento', condicaoExclusiva: null, desc: 'Afasta-se do seu lugar e circula pela sala' },
   { id: 'MoveToRandomPoint', label: 'Mover-se para ponto aleatório', icon: '🎲', category: 'movimento', condicaoExclusiva: null, desc: 'Desloca-se até um ponto qualquer da sala' },
@@ -1220,13 +1286,15 @@ const CONFLITOS_VR = [
   { id: 'TakeMaterialOut', label: 'Pegar o material', icon: '📖', category: 'material', condicaoExclusiva: null, desc: 'Retira seu material da mochila' },
   { id: 'Make Students Laugh', label: 'Fazer os alunos rirem', icon: '😄', category: 'social', condicaoExclusiva: null, desc: 'Conta piada ou faz brincadeira para a turma rir' },
   { id: 'Make Students Talk', label: 'Fazer os alunos falarem', icon: '🗣️', category: 'social', desc: 'Inicia conversa paralela em voz alta' },
-]
+*/
+  ]
 
 const acaoSelecionada = ref('')
 const categoriaAcaoAtiva = ref('todos')
 const buscaAcao = ref('')
 const alunoAlvoSelecionado = ref('')
 const enviandoComando = ref(false)
+const enviandoReset = ref('') // 'all' | 'single' | ''
 const cooldownDisparo = ref(false)
 const feedbackComando = ref(null)
 
@@ -1460,6 +1528,8 @@ const historicoComandos = computed(() => {
 const getNomeConflito = (tipoId) => {
   const c = CONFLITOS_VR.find(item => item.id === tipoId)
   if (c) return c.label
+  if (tipoId === 'ResetAllStudents') return 'Reiniciar Todos Estudantes'
+  if (tipoId === 'ResetSingleStudent') return 'Reiniciar Estudante Selecionado'
   if (tipoId === 'Hyperstimulate' || tipoId === 'HyperstimulationConflict') return 'Hiperestimulação'
   if (tipoId === 'GetDistracted' || tipoId === 'GetDistractedTEAConflict') return 'Distrair-se (TEA)'
   if (tipoId === 'BotherRandomStudents' || tipoId === 'BotherSomeoneConflict') return 'Incomodar colegas'
@@ -1546,6 +1616,135 @@ const enviarComandoVR = async () => {
     }
   } finally {
     enviandoComando.value = false
+    setTimeout(() => {
+      cooldownDisparo.value = false
+    }, 1200)
+    setTimeout(() => {
+      if (feedbackComando.value?.tipo === 'success') {
+        feedbackComando.value = null
+      }
+    }, 6000)
+  }
+}
+
+const reiniciarEstudanteSelecionado = async () => {
+  if (cooldownDisparo.value || enviandoComando.value || enviandoReset.value) return
+
+  if (!podeModificarEControlar.value) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para enviar comandos ao VR.'
+    }
+    return
+  }
+
+  if (!isSalaAtiva(sala.value)) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para enviar comandos.'
+    }
+    return
+  }
+
+  if (!alunoAlvoSelecionado.value) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Por favor, selecione um estudante no Passo 1 para reiniciar seu comportamento.'
+    }
+    return
+  }
+
+  enviandoReset.value = 'single'
+  cooldownDisparo.value = true
+  feedbackComando.value = null
+
+  try {
+    const timestampAtual = Date.now()
+    const payload = {
+      tipo_conflito: 'ResetSingleStudent',
+      aluno_alvo: alunoAlvoSelecionado.value,
+      timestamp: timestampAtual
+    }
+
+    const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
+    await push(comandosRef, payload)
+
+    feedbackComando.value = {
+      tipo: 'success',
+      texto: `Estudante "${alunoAlvoSelecionado.value}" reiniciado(a) com sucesso no VR!`
+    }
+  } catch (error) {
+    console.error("Erro ao reiniciar estudante no VR:", error)
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Ocorreu um erro ao enviar comando de reinicialização para o Firebase. Tente novamente.'
+    }
+  } finally {
+    enviandoReset.value = ''
+    setTimeout(() => {
+      cooldownDisparo.value = false
+    }, 1200)
+    setTimeout(() => {
+      if (feedbackComando.value?.tipo === 'success') {
+        feedbackComando.value = null
+      }
+    }, 6000)
+  }
+}
+
+const reiniciarTodosEstudantes = async () => {
+  if (cooldownDisparo.value || enviandoComando.value || enviandoReset.value) return
+
+  if (!podeModificarEControlar.value) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para enviar comandos ao VR.'
+    }
+    return
+  }
+
+  if (!isSalaAtiva(sala.value)) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para enviar comandos.'
+    }
+    return
+  }
+
+  if (alunosVR.value.length === 0) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Nenhum estudante virtual encontrado nesta sala.'
+    }
+    return
+  }
+
+  enviandoReset.value = 'all'
+  cooldownDisparo.value = true
+  feedbackComando.value = null
+
+  try {
+    const timestampAtual = Date.now()
+    const payload = {
+      tipo_conflito: 'ResetAllStudents',
+      timestamp: timestampAtual
+    }
+
+    const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
+    await push(comandosRef, payload)
+
+    feedbackComando.value = {
+      tipo: 'success',
+      texto: 'Comando para reiniciar TODOS os estudantes disparado com sucesso no VR!'
+    }
+  } catch (error) {
+    console.error("Erro ao reiniciar todos os estudantes no VR:", error)
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Ocorreu um erro ao enviar comando de reinicialização para o Firebase. Tente novamente.'
+    }
+  } finally {
+    enviandoReset.value = ''
     setTimeout(() => {
       cooldownDisparo.value = false
     }, 1200)
@@ -5056,6 +5255,148 @@ onUnmounted(() => {
   height: 18px;
 }
 
+/* ==========================================
+   BARRA DE REINICIALIZAÇÃO VR (BOTÕES VERMELHOS)
+   ========================================== */
+.command-reset-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
+  border: 1.5px solid #fecaca;
+  border-radius: 18px;
+  padding: 16px 22px;
+  margin-top: 10px;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);
+}
+
+.reset-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reset-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reset-header-icon {
+  font-size: 1.15rem;
+  background: #fee2e2;
+  border-radius: 10px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.reset-header-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #991b1b;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.reset-header-desc {
+  font-size: 0.78rem;
+  color: #7f1d1d;
+  opacity: 0.88;
+}
+
+.reset-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+/* Botões Vermelhos de Reset */
+.btn-vr-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 55%, #e11d48 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  padding: 13px 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.28);
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+
+.btn-vr-danger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.btn-vr-danger:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.btn-vr-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 55%, #be123c 100%);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.42);
+}
+
+.btn-vr-danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-vr-danger:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(20%);
+}
+
+.reset-btn-svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.btn-reset-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.btn-reset-title {
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.btn-reset-subtitle {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.2;
+}
+
 /* Feed de Comandos Recentes */
 .recent-commands-feed {
   background: #ffffff;
@@ -5153,6 +5494,33 @@ onUnmounted(() => {
   background: #ecfdf5;
   padding: 2px 8px;
   border-radius: 6px;
+}
+
+/* Destaque para comandos de Reset no feed */
+.command-feed-item.is-reset-item {
+  border-left: 3px solid #ef4444;
+  background: #fef2f2;
+}
+
+.feed-status-dot.dot-reset {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.feed-conflito.conflito-reset {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.feed-check-tag.check-reset {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.feed-aluno-pill.all-students-pill {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
 }
 
 /* Animations */
