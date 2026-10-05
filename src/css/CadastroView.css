@@ -254,6 +254,13 @@
   margin-bottom: 0.4rem;
 }
 
+.optional-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-gray);
+  margin-left: 4px;
+}
+
 .input-box {
   position: relative;
   display: flex;
