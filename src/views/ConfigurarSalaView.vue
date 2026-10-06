@@ -943,6 +943,98 @@
                   </button>
                 </div>
 
+                <!-- SEÇÃO DEDICADA: FALA DO ESTUDANTE / TEXT-TO-SPEECH (TTS) -->
+                <div class="command-tts-card">
+                  <div class="tts-card-header">
+                    <div class="tts-header-left">
+                      <span class="tts-header-icon">🗣️</span>
+                      <div class="tts-header-text">
+                        <div class="tts-header-title-row">
+                          <span class="tts-header-title">Comunicação por Voz / Fala do Estudante (Text-to-Speech)</span>
+                          <span class="tts-tech-tag">TTS em Tempo Real</span>
+                        </div>
+                        <span class="tts-header-desc">
+                          Digite uma fala personalizada para o estudante selecionado verbalizar imediatamente na simulação VR.
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Indicador do Destinatário Alvo -->
+                    <div class="tts-target-indicator notranslate" translate="no">
+                      <span class="tts-target-label">ALUNO ALVO:</span>
+                      <div v-if="alunoAlvoSelecionado" class="tts-target-pill">
+                        <strong class="tts-target-name">{{ alunoAlvoSelecionado }}</strong>
+                        <span v-if="alunoAlvoObj && (alunoAlvoObj.isTEA || alunoAlvoObj.isTDAH)" :class="['summary-cond-pill', alunoAlvoObj.isTEA ? 'cond-tea' : 'cond-tdah']">
+                          <span class="cond-icon-mini">{{ alunoAlvoObj.isTEA ? '🧩' : '⚡' }}</span>
+                          {{ alunoAlvoObj.condicao }}
+                        </span>
+                      </div>
+                      <span v-else class="tts-target-warning">
+                        ⚠️ Selecione no Passo 1
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="tts-card-body">
+                    <div class="tts-input-wrapper">
+                      <div class="tts-input-prefix">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tts-input-svg">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        v-model="textoTTS"
+                        class="tts-text-input"
+                        placeholder="Digite o que o aluno deve falar... (Ex: 'Professor, posso tirar uma dúvida?', 'Esqueci meu caderno!')"
+                        :disabled="!isSalaAtiva(sala) || !podeModificarEControlar || alunosVR.length === 0"
+                        maxlength="300"
+                        @keydown.enter.prevent="enviarTTS"
+                      />
+                      <button
+                        v-if="textoTTS"
+                        type="button"
+                        class="tts-clear-btn"
+                        title="Limpar texto"
+                        @click="textoTTS = ''"
+                      >
+                        &times;
+                      </button>
+                      <span class="tts-char-counter" :class="{ 'is-limit': textoTTS.length >= 280 }">
+                        {{ textoTTS.length }}/300
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="btn-tts-send"
+                      :disabled="enviandoTTS || cooldownDisparo || enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado || !textoTTS.trim() || alunosVR.length === 0"
+                      @click="enviarTTS"
+                      :title="!alunoAlvoSelecionado ? 'Selecione um aluno alvo no Passo 1' : !textoTTS.trim() ? 'Digite o texto da fala' : `Enviar fala para ${alunoAlvoSelecionado} no VR`"
+                    >
+                      <span v-if="enviandoTTS" class="btn-spinner-tech"></span>
+                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tts-send-svg">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                      <span>
+                        {{ enviandoTTS ? 'Transmitindo Fala...' : 'Enviar Fala para o Óculos VR' }}
+                      </span>
+                    </button>
+                  </div>
+
+                  <!-- Barra de orientações / requisitos -->
+                  <div class="tts-card-footer">
+                    <span class="tts-requirement-hint" :class="{ 'req-valid': alunoAlvoSelecionado && textoTTS.trim() }">
+                      <span class="req-icon">{{ (alunoAlvoSelecionado && textoTTS.trim()) ? '✓' : 'ℹ️' }}</span>
+                      Requisitos obrigatórios: Texto no campo + Aluno alvo selecionado no Passo 1.
+                    </span>
+                    <span class="tts-shortcut-hint">
+                      Pressione <kbd class="kbd-badge">Enter</kbd> no campo para envio rápido
+                    </span>
+                  </div>
+                </div>
+
                 <!-- BARRA DE REINICIALIZAÇÃO (BOTÕES VERMELHOS DE RESET VR) -->
                 <div class="command-reset-bar">
                   <div class="reset-bar-header">
@@ -1017,10 +1109,19 @@
                       v-for="cmd in historicoComandos"
                       :key="cmd.key"
                       class="command-feed-item"
-                      :class="{ 'is-reset-item': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }"
+                      :class="{ 
+                        'is-reset-item': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
+                        'is-tts-item': cmd.tipo_conflito === 'TextToSpeech'
+                      }"
                     >
                       <div class="feed-item-left">
-                        <span class="feed-status-dot" :class="{ 'dot-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }"></span>
+                        <span 
+                          class="feed-status-dot" 
+                          :class="{ 
+                            'dot-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
+                            'dot-tts': cmd.tipo_conflito === 'TextToSpeech'
+                          }"
+                        ></span>
                         <span class="feed-time">{{ formatHoraComando(cmd.timestamp) }}</span>
                         <div class="feed-aluno-pill notranslate" translate="no" :class="{ 'all-students-pill': !cmd.aluno_alvo }">
                           <span class="feed-aluno-name">{{ cmd.aluno_alvo || 'Todos os Estudantes' }}</span>
@@ -1029,13 +1130,31 @@
                           </span>
                         </div>
                         <span class="feed-arrow">→</span>
-                        <span class="feed-conflito" :class="{ 'conflito-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }">
+                        <span 
+                          class="feed-conflito" 
+                          :class="{ 
+                            'conflito-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
+                            'conflito-tts': cmd.tipo_conflito === 'TextToSpeech'
+                          }"
+                        >
                           {{ getNomeConflito(cmd.tipo_conflito) }}
                           <code class="feed-code">({{ cmd.tipo_conflito }})</code>
                         </span>
+
+                        <!-- Mensagem verbalizada se for TextToSpeech -->
+                        <div v-if="cmd.tipo_conflito === 'TextToSpeech' && cmd.mensagem" class="feed-tts-bubble" title="Texto verbalizado pelo aluno">
+                          <span class="feed-tts-bubble-icon">💬</span>
+                          <span class="feed-tts-bubble-text">“{{ cmd.mensagem }}”</span>
+                        </div>
                       </div>
-                      <span class="feed-check-tag" :class="{ 'check-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' }">
-                        {{ cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' ? '🔄 Reset VR' : '✓ No VR' }}
+                      <span 
+                        class="feed-check-tag" 
+                        :class="{ 
+                          'check-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
+                          'check-tts': cmd.tipo_conflito === 'TextToSpeech'
+                        }"
+                      >
+                        {{ cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' ? '🔄 Reset VR' : cmd.tipo_conflito === 'TextToSpeech' ? '🗣️ Fala no VR' : '✓ No VR' }}
                       </span>
                     </div>
                   </div>
@@ -1293,6 +1412,8 @@ const acaoSelecionada = ref('')
 const categoriaAcaoAtiva = ref('todos')
 const buscaAcao = ref('')
 const alunoAlvoSelecionado = ref('')
+const textoTTS = ref('')
+const enviandoTTS = ref(false)
 const enviandoComando = ref(false)
 const enviandoReset = ref('') // 'all' | 'single' | ''
 const cooldownDisparo = ref(false)
@@ -1528,6 +1649,7 @@ const historicoComandos = computed(() => {
 const getNomeConflito = (tipoId) => {
   const c = CONFLITOS_VR.find(item => item.id === tipoId)
   if (c) return c.label
+  if (tipoId === 'TextToSpeech') return 'Fala do Estudante (TTS)'
   if (tipoId === 'ResetAllStudents') return 'Reiniciar Todos Estudantes'
   if (tipoId === 'ResetSingleStudent') return 'Reiniciar Estudante Selecionado'
   if (tipoId === 'Hyperstimulate' || tipoId === 'HyperstimulationConflict') return 'Hiperestimulação'
@@ -1616,6 +1738,82 @@ const enviarComandoVR = async () => {
     }
   } finally {
     enviandoComando.value = false
+    setTimeout(() => {
+      cooldownDisparo.value = false
+    }, 1200)
+    setTimeout(() => {
+      if (feedbackComando.value?.tipo === 'success') {
+        feedbackComando.value = null
+      }
+    }, 6000)
+  }
+}
+
+const enviarTTS = async () => {
+  if (cooldownDisparo.value || enviandoTTS.value || enviandoComando.value || enviandoReset.value) return
+
+  if (!podeModificarEControlar.value) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para enviar comandos ao VR.'
+    }
+    return
+  }
+
+  if (!isSalaAtiva(sala.value)) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para enviar comandos.'
+    }
+    return
+  }
+
+  if (!alunoAlvoSelecionado.value) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Por favor, selecione o aluno alvo no Passo 1 para enviar o comando de fala.'
+    }
+    return
+  }
+
+  const mensagemLimpa = textoTTS.value.trim()
+  if (!mensagemLimpa) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Por favor, digite uma mensagem de texto para a fala do aluno.'
+    }
+    return
+  }
+
+  enviandoTTS.value = true
+  cooldownDisparo.value = true
+  feedbackComando.value = null
+
+  try {
+    const timestampAtual = Date.now()
+    const payload = {
+      tipo_conflito: 'TextToSpeech',
+      aluno_alvo: alunoAlvoSelecionado.value,
+      timestamp: timestampAtual,
+      mensagem: mensagemLimpa
+    }
+
+    const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
+    await push(comandosRef, payload)
+
+    feedbackComando.value = {
+      tipo: 'success',
+      texto: `Fala "${mensagemLimpa}" enviada com sucesso para ${alunoAlvoSelecionado.value} no VR!`
+    }
+    textoTTS.value = ''
+  } catch (error) {
+    console.error("Erro ao enviar comando TextToSpeech para o óculos VR:", error)
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Ocorreu um erro ao enviar para o Firebase. Tente novamente.'
+    }
+  } finally {
+    enviandoTTS.value = false
     setTimeout(() => {
       cooldownDisparo.value = false
     }, 1200)
@@ -5521,6 +5719,347 @@ onUnmounted(() => {
 .feed-aluno-pill.all-students-pill {
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
+}
+
+/* ==========================================
+   CARD DE FALA DO ESTUDANTE / TEXT-TO-SPEECH
+   ========================================== */
+.command-tts-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: linear-gradient(135deg, #f0f7ff 0%, #f5f3ff 100%);
+  border: 1.5px solid #c7d2fe;
+  border-radius: 18px;
+  padding: 18px 24px;
+  margin-top: 10px;
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.08);
+}
+
+.tts-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tts-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.tts-header-icon {
+  font-size: 1.35rem;
+  background: #e0e7ff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+.tts-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tts-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tts-header-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #312e81;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.tts-tech-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #4f46e5;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.tts-header-desc {
+  font-size: 0.8rem;
+  color: #4338ca;
+  opacity: 0.9;
+}
+
+.tts-target-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  padding: 6px 12px;
+}
+
+.tts-target-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #6366f1;
+  letter-spacing: 0.5px;
+}
+
+.tts-target-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tts-target-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.tts-target-warning {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.tts-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tts-input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  align-items: center;
+}
+
+.tts-input-prefix {
+  position: absolute;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  color: #6366f1;
+  pointer-events: none;
+}
+
+.tts-input-svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tts-text-input {
+  width: 100%;
+  padding: 13px 80px 13px 42px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  color: #1e293b;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.tts-text-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  background: #ffffff;
+}
+
+.tts-text-input:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.tts-clear-btn {
+  position: absolute;
+  right: 56px;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.tts-clear-btn:hover {
+  color: #ef4444;
+}
+
+.tts-char-counter {
+  position: absolute;
+  right: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.tts-char-counter.is-limit {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.btn-tts-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.92rem;
+  border: none;
+  border-radius: 14px;
+  padding: 13px 24px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.32);
+}
+
+.btn-tts-send:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.44);
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #4338ca 100%);
+}
+
+.btn-tts-send:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-tts-send:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(15%);
+}
+
+.tts-send-svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tts-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(99, 102, 241, 0.2);
+}
+
+.tts-requirement-hint {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tts-requirement-hint.req-valid {
+  color: #059669;
+}
+
+.req-icon {
+  font-weight: 800;
+}
+
+.tts-shortcut-hint {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.kbd-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 0.68rem;
+  font-family: inherit;
+  font-weight: 700;
+  color: #334155;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+/* Feed TTS Items */
+.command-feed-item.is-tts-item {
+  border-left: 3px solid #0284c7;
+  background: #f0f9ff;
+}
+
+.feed-status-dot.dot-tts {
+  background: #0284c7;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
+}
+
+.feed-conflito.conflito-tts {
+  color: #0369a1;
+  font-weight: 700;
+}
+
+.feed-check-tag.check-tts {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.feed-tts-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  color: #0f172a;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-tts-bubble-icon {
+  font-size: 0.85rem;
+}
+
+.feed-tts-bubble-text {
+  font-style: italic;
+  font-weight: 600;
+  color: #0369a1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Animations */
