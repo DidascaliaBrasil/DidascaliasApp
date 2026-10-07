@@ -173,100 +173,144 @@
             <!-- DIVISÓRIA SUTIL DIDASCALIAS -->
             <div class="didas-subtle-divider"></div>
 
-            <!-- SEÇÃO 2: CENÁRIOS / CONFLITOS VR (DISPARO IMEDIATO) -->
-            <div class="scenarios-section">
-              <div class="scenarios-header-row">
-                <div class="scenarios-title-wrap">
-                  <h2 class="scenarios-title">Cenários</h2>
-                  <span class="scenarios-subtitle">Clique em um cenário para disparar imediatamente no VR</span>
+            <!-- ÁREA DE CENÁRIOS E SONS (COM GAVETA EXPANSÍVEL QUE COBRE OS CENÁRIOS) -->
+            <div class="scenarios-and-sounds-wrapper">
+
+              <!-- SEÇÃO 2: CENÁRIOS / CONFLITOS VR (DISPARO IMEDIATO) -->
+              <div class="scenarios-section">
+                <div class="scenarios-header-row">
+                  <div class="scenarios-title-wrap">
+                    <h2 class="scenarios-title">Cenários</h2>
+                    <span class="scenarios-subtitle">Clique em um cenário para disparar imediatamente no VR</span>
+                  </div>
+
+                  <!-- Filtros Rápidos de Categoria -->
+                  <div class="scenarios-filter-pills">
+                    <button
+                      v-for="cat in categoriasFiltro"
+                      :key="cat.id"
+                      type="button"
+                      class="filter-pill-btn"
+                      :class="{ 'is-active': categoriaAcaoAtiva === cat.id }"
+                      @click="categoriaAcaoAtiva = cat.id"
+                    >
+                      <span>{{ cat.icon }}</span>
+                      <span>{{ cat.label }}</span>
+                    </button>
+                  </div>
                 </div>
 
-                <!-- Filtros Rápidos de Categoria -->
-                <div class="scenarios-filter-pills">
+                <!-- Grade de Cenários (Estilo Didascalias: Cards com acento suave e disparo imediato) -->
+                <div class="scenarios-grid">
                   <button
-                    v-for="cat in categoriasFiltro"
-                    :key="cat.id"
+                    v-for="acao in acoesFiltradas"
+                    :key="acao.id"
                     type="button"
-                    class="filter-pill-btn"
-                    :class="{ 'is-active': categoriaAcaoAtiva === cat.id }"
-                    @click="categoriaAcaoAtiva = cat.id"
+                    class="scenario-glass-card"
+                    :class="{
+                      'is-firing': acaoEmDisparo === acao.id,
+                      'is-locked': !isAcaoDisponivelParaAluno(acao),
+                      'is-tea-exclusive': acao.condicaoExclusiva === 'TEA',
+                      'is-tdah-exclusive': acao.condicaoExclusiva === 'TDAH'
+                    }"
+                    :disabled="acaoEmDisparo !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar || !isAcaoDisponivelParaAluno(acao)"
+                    @click="dispararCenarioImediato(acao)"
+                    :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : `Disparar ${acao.label} imediatamente para ${alunoAlvoSelecionado}`"
                   >
-                    <span>{{ cat.icon }}</span>
-                    <span>{{ cat.label }}</span>
+                    <div class="scenario-card-header">
+                      <span class="scenario-icon-box">{{ acao.icon }}</span>
+                      <span v-if="acao.condicaoExclusiva" class="scenario-cond-badge" :class="acao.condicaoExclusiva.toLowerCase()">
+                        {{ acao.condicaoExclusiva }}
+                      </span>
+                    </div>
+
+                    <strong class="scenario-card-title">{{ acao.label }}</strong>
+                    <span class="scenario-card-desc">{{ acao.desc }}</span>
+
+                    <div class="scenario-card-footer">
+                      <span v-if="acaoEmDisparo === acao.id" class="btn-spinner-tech red"></span>
+                      <span v-else class="instant-trigger-badge">⚡ Disparo Imediato</span>
+                    </div>
                   </button>
                 </div>
               </div>
 
-              <!-- Grade de Cenários (Estilo Didascalias: Cards com acento suave e disparo imediato) -->
-              <div class="scenarios-grid">
-                <button
-                  v-for="acao in acoesFiltradas"
-                  :key="acao.id"
-                  type="button"
-                  class="scenario-glass-card"
-                  :class="{
-                    'is-firing': acaoEmDisparo === acao.id,
-                    'is-locked': !isAcaoDisponivelParaAluno(acao),
-                    'is-tea-exclusive': acao.condicaoExclusiva === 'TEA',
-                    'is-tdah-exclusive': acao.condicaoExclusiva === 'TDAH'
-                  }"
-                  :disabled="acaoEmDisparo !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar || !isAcaoDisponivelParaAluno(acao)"
-                  @click="dispararCenarioImediato(acao)"
-                  :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : `Disparar ${acao.label} imediatamente para ${alunoAlvoSelecionado}`"
-                >
-                  <div class="scenario-card-header">
-                    <span class="scenario-icon-box">{{ acao.icon }}</span>
-                    <span v-if="acao.condicaoExclusiva" class="scenario-cond-badge" :class="acao.condicaoExclusiva.toLowerCase()">
-                      {{ acao.condicaoExclusiva }}
-                    </span>
-                  </div>
-
-                  <strong class="scenario-card-title">{{ acao.label }}</strong>
-                  <span class="scenario-card-desc">{{ acao.desc }}</span>
-
-                  <div class="scenario-card-footer">
-                    <span v-if="acaoEmDisparo === acao.id" class="btn-spinner-tech red"></span>
-                    <span v-else class="instant-trigger-badge">⚡ Disparo Imediato</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <!-- DIVISÓRIA SUTIL DIDASCALIAS -->
-            <div class="didas-subtle-divider"></div>
-
-            <!-- SEÇÃO 3: SONS DA SALA (EMBAIXO DOS CENÁRIOS, EXTENSÍVEL) -->
-            <div class="sounds-section">
-              <div class="sounds-title-row">
-                <div class="sounds-title-wrap">
-                  <span class="sounds-icon-tag">🔔</span>
-                  <span class="sounds-title">Sons da Sala</span>
-                  <span class="sounds-tech-badge">Áudio Imersivo</span>
+              <!-- DOCK COMPACTO INFERIOR: SONS DA SALA (BARRA COM SETINHA) -->
+              <div 
+                class="sounds-dock-bar"
+                @click="painelSonsAberto = true"
+                title="Clique para abrir e expandir a gaveta de sons da sala sobre os cenários"
+              >
+                <div class="sounds-dock-left">
+                  <span class="sounds-dock-icon">🔔</span>
+                  <strong class="sounds-dock-title">Sons da Sala</strong>
+                  <span class="sounds-dock-tech">Áudio Imersivo</span>
+                  <span class="sounds-dock-count">{{ SONS_VR.length }} disponível</span>
                 </div>
-                <span class="sounds-hint-text">Dispare efeitos sonoros diretamente no headset</span>
-              </div>
 
-              <!-- Grade de Botões de Sons (Extensível para novos botões de som) -->
-              <div class="sounds-grid">
-                <button
-                  v-for="som in SONS_VR"
-                  :key="som.id"
-                  type="button"
-                  class="sound-glass-card"
-                  :class="{ 'is-firing': somEmExecucao === som.id }"
-                  :disabled="somEmExecucao !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar"
-                  @click="dispararSomVR(som)"
-                  :title="`Tocar ${som.label} no VR`"
+                <div class="sounds-dock-center">
+                  <span class="sounds-dock-hint">Clique para expandir efeitos sonoros sobre os cenários</span>
+                </div>
+
+                <button 
+                  type="button" 
+                  class="btn-sounds-dock-trigger"
+                  @click.stop="painelSonsAberto = true"
+                  title="Expandir painel de sons"
                 >
-                  <span v-if="somEmExecucao === som.id" class="btn-spinner-tech amber"></span>
-                  <span v-else class="sound-card-icon">{{ som.icon }}</span>
-                  <div class="sound-card-info">
-                    <strong class="sound-card-label">{{ som.label }}</strong>
-                    <span class="sound-card-desc">{{ som.desc }}</span>
-                  </div>
-                  <span class="sound-fire-pill">Tocar no VR</span>
+                  <span>Abrir Sons</span>
+                  <span class="dock-arrow-icon">▲</span>
                 </button>
               </div>
+
+              <!-- PAINEL EXPANSÍVEL DE SONS (COBRE OS CENÁRIOS AO ABRIR) -->
+              <Transition name="sounds-drawer-expand">
+                <div v-if="painelSonsAberto" class="sounds-expanded-drawer">
+                  <div class="sounds-drawer-header">
+                    <div class="sounds-drawer-header-left">
+                      <div class="sounds-drawer-badge-wrap">
+                        <span class="sounds-drawer-icon">🔔</span>
+                        <h3 class="sounds-drawer-title">Sons da Sala</h3>
+                        <span class="sounds-drawer-tech">Áudio Imersivo</span>
+                      </div>
+                      <span class="sounds-drawer-subtitle">Dispare efeitos sonoros diretamente no headset VR</span>
+                    </div>
+
+                    <button 
+                      type="button" 
+                      class="btn-sounds-drawer-collapse"
+                      @click="painelSonsAberto = false"
+                      title="Recolher painel de sons e voltar aos cenários"
+                    >
+                      <span>Recolher Sons</span>
+                      <span class="collapse-arrow-icon">▼</span>
+                    </button>
+                  </div>
+
+                  <!-- Grade de Sons quando expandido -->
+                  <div class="sounds-drawer-grid">
+                    <button
+                      v-for="som in SONS_VR"
+                      :key="som.id"
+                      type="button"
+                      class="sound-glass-card"
+                      :class="{ 'is-firing': somEmExecucao === som.id }"
+                      :disabled="somEmExecucao !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar"
+                      @click="dispararSomVR(som)"
+                      :title="`Tocar ${som.label} no VR`"
+                    >
+                      <span v-if="somEmExecucao === som.id" class="btn-spinner-tech amber"></span>
+                      <span v-else class="sound-card-icon">{{ som.icon }}</span>
+                      <div class="sound-card-info">
+                        <strong class="sound-card-label">{{ som.label }}</strong>
+                        <span class="sound-card-desc">{{ som.desc }}</span>
+                      </div>
+                      <span class="sound-fire-pill">Tocar no VR</span>
+                    </button>
+                  </div>
+                </div>
+              </Transition>
+
             </div>
 
           </div>
@@ -623,6 +667,7 @@ const iniciandoSala = ref(false)
 const encerrandoSala = ref(false)
 const feedbackSessao = ref(null)
 const somEmExecucao = ref('')
+const painelSonsAberto = ref(false)
 
 // LISTA DE SONS VR (Extensível para novos botões de som!)
 const SONS_VR = [
@@ -1609,6 +1654,25 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+/* Redução compacta da navbar para tela de console */
+.console-viewport-lock :deep(.navbar),
+.console-viewport-lock .navbar {
+  padding: 8px 24px 8px 90px !important;
+  min-height: 52px !important;
+  height: 52px !important;
+}
+
+.console-viewport-lock :deep(.main-logo),
+.console-viewport-lock .main-logo {
+  height: 32px !important;
+  width: auto !important;
+}
+
+.console-viewport-lock :deep(.brand-name),
+.console-viewport-lock .brand-name {
+  font-size: 1.25rem !important;
+}
+
 /* Espaço de segurança para tradutor no canto superior direito */
 .safe-translate-space {
   padding-right: 140px;
@@ -1620,8 +1684,8 @@ onUnmounted(() => {
 .console-main-content {
   flex: 1;
   min-height: 0;
-  height: calc(100vh - 68px);
-  padding: 12px 24px 16px 95px;
+  height: calc(100vh - 52px);
+  padding: 8px 18px 10px 88px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1635,7 +1699,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -1646,37 +1710,37 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: 16px;
-  padding: 8px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 6px 14px;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
   flex-shrink: 0;
-  gap: 14px;
+  gap: 10px;
 }
 
 .toolbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .btn-back-nav-compact {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 6px 12px;
+  border-radius: 9px;
+  padding: 5px 10px;
   color: #334155;
   font-weight: 700;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
 }
 
 .btn-back-nav-compact:hover {
@@ -1687,26 +1751,26 @@ onUnmounted(() => {
 }
 
 .back-svg-mini {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .toolbar-room-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.9);
-  padding: 5px 12px;
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: 9px;
   border: 1px solid #e2e8f0;
 }
 
 .room-badge-icon {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .room-badge-name {
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 800;
   color: #0f172a;
 }
@@ -1714,26 +1778,26 @@ onUnmounted(() => {
 .toolbar-center-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-didas-session {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 0.84rem;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
   font-weight: 800;
   border: none;
   cursor: pointer;
   color: #ffffff;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
 .btn-didas-session:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   filter: brightness(1.06);
 }
 
@@ -1751,44 +1815,44 @@ onUnmounted(() => {
 
 .btn-start {
   background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.28);
 }
 
 .btn-end {
   background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
-  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.28);
+  box-shadow: 0 3px 10px rgba(225, 29, 72, 0.26);
 }
 
 .btn-reset-all {
   background: linear-gradient(135deg, #475569 0%, #64748b 100%);
-  box-shadow: 0 4px 14px rgba(71, 85, 105, 0.25);
+  box-shadow: 0 3px 10px rgba(71, 85, 105, 0.22);
 }
 
 .btn-action-icon {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .toolbar-right-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-didas-tool {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 0.82rem;
+  border-radius: 9px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #334155;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
 }
 
 .btn-didas-tool:hover {
@@ -1801,9 +1865,9 @@ onUnmounted(() => {
 .tool-count-pill {
   background: #0071e3;
   color: #ffffff;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 999px;
 }
 
@@ -1815,16 +1879,16 @@ onUnmounted(() => {
   min-height: 0;
   height: 100%;
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 16px;
+  grid-template-columns: 1fr 310px;
+  gap: 12px;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1.5px solid rgba(255, 255, 255, 0.9);
-  border-radius: 20px;
-  padding: 16px 20px;
+  border-radius: 16px;
+  padding: 10px 14px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
 /* ==========================================
@@ -1839,79 +1903,82 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* SEÇÃO 1: ALUNOS */
+/* SEÇÃO 1: ALUNOS (COMPACTO, SEM SCROLL HORIZONTAL) */
 .students-section {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .section-title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .section-title {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .section-badge-counter {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #64748b;
   background: #f1f5f9;
-  padding: 3px 8px;
-  border-radius: 8px;
+  padding: 2px 7px;
+  border-radius: 6px;
 }
 
 .hint-sala-inativa-pill {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #d97706;
   background: #fef3c7;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 6px;
   margin-left: auto;
 }
 
+/* Track de estudantes em flex-wrap compacto: ZERO scroll horizontal */
 .students-track {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 2px 2px 6px 2px;
-  scrollbar-width: thin;
+  gap: 5px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  padding: 1px 0;
 }
 
 .student-glass-card {
   border: 1.5px solid #bae6fd;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 9px 18px;
-  min-width: 110px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 4px 9px;
+  height: 28px;
+  min-width: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 0.95rem;
+  gap: 5px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #1e293b;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.06);
 }
 
 .student-glass-card:hover {
   background: #f0f9ff;
   border-color: #0284c7;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.16);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.14);
 }
 
 /* Aluno Selecionado (Ciano Luminoso Apple Glass) */
@@ -1920,15 +1987,15 @@ onUnmounted(() => {
   border-color: #0284c7;
   color: #0369a1;
   font-weight: 800;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.25);
 }
 
 .student-cond-chip {
-  font-size: 0.65rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
   text-transform: uppercase;
 }
 
@@ -1943,19 +2010,31 @@ onUnmounted(() => {
 }
 
 .no-students-banner {
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   color: #b45309;
-  padding: 6px 12px;
+  padding: 4px 10px;
   background: #fef3c7;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 /* DIVISÓRIA SUTIL DIDASCALIAS */
 .didas-subtle-divider {
   height: 1px;
   background: #e2e8f0;
-  margin: 8px 0;
+  margin: 5px 0;
   flex-shrink: 0;
+}
+
+/* ==========================================
+   CONTAINER: CENÁRIOS E GAVETA DE SONS
+   ========================================== */
+.scenarios-and-sounds-wrapper {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* SEÇÃO 2: CENÁRIOS */
@@ -1964,8 +2043,9 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
+  padding-bottom: 6px;
 }
 
 .scenarios-header-row {
@@ -1973,25 +2053,25 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  gap: 12px;
+  gap: 8px;
 }
 
 .scenarios-title-wrap {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 
 .scenarios-title {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .scenarios-subtitle {
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   color: #64748b;
   font-weight: 500;
 }
@@ -1999,18 +2079,18 @@ onUnmounted(() => {
 .scenarios-filter-pills {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .filter-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 8px;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #475569;
   cursor: pointer;
@@ -2028,38 +2108,38 @@ onUnmounted(() => {
   color: #ffffff;
 }
 
-/* GRADE DE CENÁRIOS (ESTILO DIDASCALIAS: DISPARO DIRETO NO CLIQUE) */
+/* GRADE DE CENÁRIOS (COMPACTO, CABE SEM SCROLL NA TELA) */
 .scenarios-grid {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-  padding: 2px 4px 6px 2px;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 8px;
+  padding: 2px 2px 4px 2px;
   scrollbar-width: thin;
 }
 
 .scenario-glass-card {
   border: 1.5px solid #fecaca;
-  border-radius: 14px;
+  border-radius: 11px;
   background: #ffffff;
-  padding: 11px 13px;
+  padding: 7px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 94px;
+  min-height: 72px;
   text-align: left;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.05);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.04);
   position: relative;
 }
 
 .scenario-glass-card:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: #f87171;
-  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.16);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.14);
   background: #fffafa;
 }
 
@@ -2070,7 +2150,7 @@ onUnmounted(() => {
 .scenario-glass-card.is-firing {
   border-color: #10b981;
   background: #ecfdf5;
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
 }
 
 .scenario-glass-card:disabled {
@@ -2090,14 +2170,14 @@ onUnmounted(() => {
 }
 
 .scenario-icon-box {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
 }
 
 .scenario-cond-badge {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 1px 5px;
+  border-radius: 5px;
   text-transform: uppercase;
 }
 
@@ -2112,17 +2192,17 @@ onUnmounted(() => {
 }
 
 .scenario-card-title {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 800;
   color: #0f172a;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .scenario-card-desc {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #64748b;
-  line-height: 1.25;
-  margin: 3px 0 6px 0;
+  line-height: 1.2;
+  margin: 2px 0 4px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -2136,81 +2216,229 @@ onUnmounted(() => {
 }
 
 .instant-trigger-badge {
-  font-size: 0.66rem;
+  font-size: 0.62rem;
   font-weight: 800;
   color: #e11d48;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
-/* SEÇÃO 3: SONS DA SALA (EMBAIXO DOS CENÁRIOS, EXTENSÍVEL) */
-.sounds-section {
+/* ==========================================
+   SEÇÃO 3: SONS DA SALA (DOCK BAR & EXPANDABLE DRAWER)
+   ========================================== */
+
+/* BARRA INFERIOR / DOCK COMPACTO COM SETINHA */
+.sounds-dock-bar {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sounds-title-row {
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 12px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fde68a;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+  gap: 8px;
 }
 
-.sounds-title-wrap {
+.sounds-dock-bar:hover {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.16);
+  transform: translateY(-1px);
+}
+
+.sounds-dock-left {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.sounds-icon-tag {
-  font-size: 1rem;
+.sounds-dock-icon {
+  font-size: 0.95rem;
 }
 
-.sounds-title {
-  font-size: 1.05rem;
+.sounds-dock-title {
+  font-size: 0.82rem;
   font-weight: 800;
-  color: #0f172a;
-}
-
-.sounds-tech-badge {
-  font-size: 0.66rem;
-  font-weight: 800;
-  background: #fef3c7;
   color: #92400e;
-  padding: 2px 6px;
-  border-radius: 6px;
+}
+
+.sounds-dock-tech {
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: #ffffff;
+  color: #92400e;
+  padding: 1px 5px;
+  border-radius: 5px;
   border: 1px solid #fde68a;
 }
 
-.sounds-hint-text {
-  font-size: 0.72rem;
-  color: #64748b;
+.sounds-dock-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #b45309;
 }
 
-.sounds-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+.sounds-dock-center {
+  font-size: 0.7rem;
+  color: #b45309;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-sounds-dock-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #f59e0b;
+  border-radius: 7px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #b45309;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-sounds-dock-trigger:hover {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+}
+
+.dock-arrow-icon {
+  font-size: 0.65rem;
+  transition: transform 0.2s ease;
+}
+
+/* PAINEL EXPANSÍVEL DE SONS (COBRE OS CENÁRIOS AO ABRIR) */
+.sounds-expanded-drawer {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid #fde68a;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.18);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
   gap: 10px;
+  overflow: hidden;
+}
+
+.sounds-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  border-bottom: 1px solid #fef3c7;
+  padding-bottom: 8px;
+}
+
+.sounds-drawer-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sounds-drawer-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sounds-drawer-icon {
+  font-size: 1.05rem;
+}
+
+.sounds-drawer-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #92400e;
+  margin: 0;
+}
+
+.sounds-drawer-tech {
+  font-size: 0.64rem;
+  font-weight: 800;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid #fde68a;
+}
+
+.sounds-drawer-subtitle {
+  font-size: 0.72rem;
+  color: #78350f;
+  font-weight: 500;
+}
+
+.btn-sounds-drawer-collapse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
+}
+
+.btn-sounds-drawer-collapse:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+}
+
+.collapse-arrow-icon {
+  font-size: 0.65rem;
+}
+
+.sounds-drawer-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+  padding-right: 4px;
+  scrollbar-width: thin;
 }
 
 .sound-glass-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 8px 12px;
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   border: 1.5px solid #fde68a;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
 }
 
 .sound-glass-card:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: #f59e0b;
-  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
 }
 
 .sound-glass-card:active:not(:disabled) {
@@ -2224,10 +2452,10 @@ onUnmounted(() => {
 }
 
 .sound-card-icon {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   background: #ffffff;
-  border-radius: 10px;
-  padding: 6px 8px;
+  border-radius: 8px;
+  padding: 5px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2241,24 +2469,37 @@ onUnmounted(() => {
 }
 
 .sound-card-label {
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 800;
   color: #92400e;
 }
 
 .sound-card-desc {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #b45309;
 }
 
 .sound-fire-pill {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 800;
   color: #d97706;
   background: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
   border: 1px solid #fde68a;
+  flex-shrink: 0;
+}
+
+/* Transição de abertura da gaveta de sons */
+.sounds-drawer-expand-enter-active,
+.sounds-drawer-expand-leave-active {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.sounds-drawer-expand-enter-from,
+.sounds-drawer-expand-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
 }
 
 /* ==========================================
@@ -2266,7 +2507,7 @@ onUnmounted(() => {
    ========================================== */
 .console-right-column {
   border-left: 1.5px solid #e2e8f0;
-  padding-left: 18px;
+  padding-left: 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -2278,46 +2519,46 @@ onUnmounted(() => {
 .student-meta-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .student-header-box {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .student-kicker {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 800;
   color: #0071e3;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .student-main-name {
-  font-size: 1.95rem;
+  font-size: 1.45rem;
   font-weight: 900;
   color: #0f172a;
   margin: 0;
   line-height: 1.15;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.3px;
 }
 
 .student-cond-row {
   display: flex;
   align-items: center;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .student-cond-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.82rem;
+  gap: 4px;
+  font-size: 0.76rem;
   font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
 }
 
 .student-cond-pill.pill-tea {
@@ -2342,17 +2583,17 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 9px 14px;
-  font-size: 0.82rem;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #334155;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
 }
 
 .btn-reset-student-didas:hover:not(:disabled) {
@@ -2371,27 +2612,27 @@ onUnmounted(() => {
 .student-tts-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
   background: linear-gradient(135deg, #f0f7ff 0%, #f5f3ff 100%);
   border: 1.5px solid #c7d2fe;
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 10px 12px;
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.06);
 }
 
 .tts-header-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .tts-icon {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .tts-heading {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
   color: #312e81;
   text-transform: uppercase;
@@ -2405,11 +2646,11 @@ onUnmounted(() => {
 
 .tts-glass-textarea {
   border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 10px;
   width: 100%;
-  height: 110px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  height: 80px;
+  padding: 8px 10px;
+  font-size: 0.84rem;
   resize: none;
   color: #0f172a;
   background: #ffffff;
@@ -2433,9 +2674,9 @@ onUnmounted(() => {
 
 .tts-counter-tag {
   position: absolute;
-  bottom: 8px;
-  right: 10px;
-  font-size: 0.66rem;
+  bottom: 6px;
+  right: 8px;
+  font-size: 0.62rem;
   font-weight: 700;
   color: #94a3b8;
   background: rgba(255, 255, 255, 0.9);
@@ -2447,25 +2688,25 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
   color: #ffffff;
   font-weight: 800;
-  font-size: 0.96rem;
-  letter-spacing: 0.4px;
+  font-size: 0.86rem;
+  letter-spacing: 0.3px;
   border: none;
-  border-radius: 12px;
-  padding: 13px 18px;
+  border-radius: 10px;
+  padding: 9px 14px;
   width: 100%;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.32);
+  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.28);
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-didas-tts-send:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.44);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
   background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #4338ca 100%);
 }
 
