@@ -1,7 +1,7 @@
 <style scoped src="../css/HomeView.css"></style>
 
 <template>
-  <div class="home-layout">
+  <div class="home-layout console-viewport-lock">
     <div class="animated-background"></div>
 
     <!-- Menu Lateral da Aplicação -->
@@ -10,14 +10,15 @@
       :user-data="userData" 
     />
 
-    <!-- Header / Navbar Principal -->
+    <!-- Header / Navbar Principal Didascalias (Altura normal com espaço seguro à direita para o tradutor) -->
     <nav class="navbar">
       <div class="logo-area stagger-in">
         <img src="../assets/Didas_Logo.png" alt="Didascalias Logo" class="main-logo" />
         <span class="brand-name notranslate" translate="no">Didascalias</span>
       </div>
 
-      <div class="navbar-right-info" v-if="sala">
+      <!-- Zona do Status com margem de segurança à direita para a extensão/widget de tradução do navegador -->
+      <div class="navbar-right-info safe-translate-space" v-if="sala">
         <span :class="['session-live-pulse-badge', isSalaAtiva(sala) ? 'badge-sala-ativa' : 'badge-sala-inativa']">
           <span class="pulse-beacon" v-if="isSalaAtiva(sala)"></span>
           <span class="idle-beacon" v-else></span>
@@ -26,1343 +27,479 @@
       </div>
     </nav>
 
-    <!-- Conteúdo Principal de Tela Cheia -->
-    <main class="main-content">
-      
-      <!-- Estado de Carregamento Geral -->
-      <div v-if="isLoading" class="loading-state stagger-in">
+    <!-- Conteúdo Principal - Console Didascalias -->
+    <main class="console-main-content">
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading-state">
         <div class="spinner"></div>
         <p>A carregar configuração e telemetria da sala VR...</p>
       </div>
 
       <!-- Erro ao Encontrar Sala -->
-      <div v-else-if="!sala" class="error-box stagger-in">
+      <div v-else-if="!sala" class="error-box">
         <h3>Sala não encontrada</h3>
         <p>A sala solicitada não existe ou foi removida do sistema.</p>
-        <button class="btn-back-link" @click="voltar">
-          &larr; Voltar para a Home
-        </button>
+        <button class="btn-back-link" @click="voltar">&larr; Voltar para a Home</button>
       </div>
 
-      <!-- Tela Completa da Sala -->
-      <div v-else class="sala-view-container stagger-in-2">
+      <!-- CONSOLE INTERATIVO DIDASCALIAS (SEM SCROLL GERAL) -->
+      <div v-else class="console-wrapper">
         
-        <!-- Barra de Navegação Superior (Breadcrumb + Botão Voltar) -->
-        <div class="top-nav-bar-glass">
-          <button class="btn-back-nav" @click="voltar" title="Voltar para a lista de salas">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="back-arrow-svg">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-            <span>Voltar para Salas</span>
-          </button>
+        <!-- BARRA SUPERIOR DE CONTROLE DA SESSÃO (ESTILO DIDASCALIAS) -->
+        <div class="console-session-toolbar">
+          <div class="toolbar-left">
+            <button class="btn-back-nav-compact" @click="voltar" title="Voltar para Salas">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="back-svg-mini">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Salas</span>
+            </button>
 
-          <div class="breadcrumbs-trail">
-            <router-link to="/home" class="bc-item">Início</router-link>
-            <span class="bc-sep">/</span>
-            <span class="bc-item current notranslate" translate="no">{{ sala.roomName || 'Configurar Sala' }}</span>
+            <div class="toolbar-room-badge">
+              <span class="room-badge-icon">🥽</span>
+              <span class="room-badge-name notranslate" translate="no">{{ sala.roomName || 'Sala VR' }}</span>
+            </div>
+          </div>
+
+          <!-- AÇÕES DA SESSÃO VR (INICIAR, ENCERRAR, RESET TURMA) -->
+          <div class="toolbar-center-actions">
+            <!-- Iniciar Sala -->
+            <button
+              type="button"
+              class="btn-didas-session btn-start"
+              :disabled="isSalaAtiva(sala) || iniciandoSala || !podeModificarEControlar"
+              @click="iniciarSalaVR"
+              :title="isSalaAtiva(sala) ? 'A sala já está ativa' : 'Iniciar a simulação no óculos VR'"
+            >
+              <span v-if="iniciandoSala" class="btn-spinner-tech white"></span>
+              <span v-else class="btn-action-icon">▶</span>
+              <span>{{ iniciandoSala ? 'Iniciando...' : 'Iniciar a Sala' }}</span>
+            </button>
+
+            <!-- Encerrar Sala -->
+            <button
+              type="button"
+              class="btn-didas-session btn-end"
+              :disabled="!isSalaAtiva(sala) || encerrandoSala || !podeModificarEControlar"
+              @click="encerrarSalaVR"
+              :title="!isSalaAtiva(sala) ? 'A sala já está inativa' : 'Encerrar a simulação no óculos VR'"
+            >
+              <span v-if="encerrandoSala" class="btn-spinner-tech white"></span>
+              <span v-else class="btn-action-icon">⏹</span>
+              <span>{{ encerrandoSala ? 'Encerrando...' : 'Encerrar a Sala' }}</span>
+            </button>
+
+            <!-- Reset Geral Turma -->
+            <button
+              type="button"
+              class="btn-didas-session btn-reset-all"
+              :disabled="enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || alunosVR.length === 0"
+              @click="reiniciarTodosEstudantes"
+              title="Reiniciar todos os estudantes no VR para o estado inicial"
+            >
+              <span v-if="enviandoReset === 'all'" class="btn-spinner-tech white"></span>
+              <span v-else class="btn-action-icon">🔄</span>
+              <span>Reset Geral</span>
+            </button>
+          </div>
+
+          <!-- BOTÕES AUXILIARES (CONFIGURAÇÃO DE HARDWARE & HISTÓRICO) -->
+          <div class="toolbar-right-tools">
+            <button
+              type="button"
+              class="btn-didas-tool"
+              @click="modalDispositivosAberto = true"
+              title="Configurar óculos VR e participante vinculado"
+            >
+              <span style="font-size: 1.05rem;">🥽</span>
+              <span>Hardware & Aluno</span>
+            </button>
+
+            <button
+              type="button"
+              class="btn-didas-tool"
+              @click="modalHistoricoAberto = true"
+              title="Histórico de comandos disparados na sessão"
+            >
+              <span>📜</span>
+              <span>Histórico</span>
+              <span class="tool-count-pill" v-if="historicoComandos.length > 0">{{ historicoComandos.length }}</span>
+            </button>
           </div>
         </div>
 
-        <!-- Hero Header Glass com Identidade e Telemetria Completa -->
-        <div class="room-hero-glass">
-          <div class="room-hero-content">
-            <div class="room-avatar-hud">
-              <span class="avatar-vr-emoji">🥽</span>
-            </div>
-
-            <div class="room-hero-meta">
-              <div class="hero-top-tags">
-                <span class="kicker-badge">SESSÃO & AMBIENTE VR</span>
-                <span class="target-type-badge">
-                  {{ sala.targetType === 'grupo' ? '👥 Grupo / Turma' : '👤 Aluno Individual' }}
-                </span>
-                <span :class="['status-live-tag', isSalaAtiva(sala) ? 'is-active' : 'is-idle']">
-                  <span class="status-dot"></span>
-                  {{ isSalaAtiva(sala) ? 'Sala Ativa no Momento' : 'Sala Inativa' }}
-                </span>
-                <span v-if="isInstituicao" :class="['role-access-badge', isFacilitadorPlus ? 'access-plus' : 'access-readonly']">
-                  {{ isFacilitadorPlus ? '⭐ Instituição FacilitadorPlus' : '👁️ Visualização Institucional' }}
-                </span>
-              </div>
-
-              <h1 class="room-hero-title notranslate" translate="no">{{ sala.roomName || 'Sala VR' }}</h1>
-              <p class="room-hero-desc">
-                Painel central de controle da sala virtual. Configure o hardware VR, vincule participantes e gerencie a simulação imersiva.
-              </p>
-            </div>
-          </div>
-
-          <!-- Quick Telemetry Bar (Zero Truncamento, 4 Cards Tecnológicos) -->
-          <div class="telemetry-bar-grid">
-            <div class="telem-item-card">
-              <div class="telem-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </div>
-              <div class="telem-data">
-                <span class="telem-label">FACILITADOR RESPONSÁVEL</span>
-                <span class="telem-value notranslate" translate="no">{{ facilitadorNome }}</span>
-              </div>
-            </div>
-
-            <div class="telem-item-card">
-              <div class="telem-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                  <line x1="10" y1="4" x2="10" y2="20"></line>
-                </svg>
-              </div>
-              <div class="telem-data">
-                <span class="telem-label">LAYOUT DA SALA</span>
-                <span class="telem-value">{{ sala.numDesks || 0 }} mesas • Formato {{ getShapeName(sala.shape) }}</span>
-              </div>
-            </div>
-
-            <div class="telem-item-card">
-              <div class="telem-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-              </div>
-              <div class="telem-data">
-                <span class="telem-label">CAPACIDADE TOTAL</span>
-                <span class="telem-value">{{ (sala.numBoys || 0) + (sala.numGirls || 0) }} alunos ({{ sala.numBoys || 0 }} 👦 • {{ sala.numGirls || 0 }} 👧<template v-if="(sala.numTEA || 0) > 0"> • 🧩 {{ sala.numTEA }} TEA</template><template v-if="(sala.numADHD || 0) > 0"> • ⚡ {{ sala.numADHD }} TDAH</template>)</span>
-              </div>
-            </div>
-
-            <div class="telem-item-card">
-              <div class="telem-icon">
-                <span style="font-size: 1.2rem;">🥽</span>
-              </div>
-              <div class="telem-data">
-                <span class="telem-label">HARDWARE VINCULADO</span>
-                <span class="telem-value" :class="{ 'text-green': selectedActiveOculos }">
-                  {{ selectedOculosObj ? (selectedOculosObj.modelo || 'Óculos VR') + ' (N° ' + (selectedOculosObj.numero_oculos || selectedOculosObj.id) + ')' : 'Nenhum dispositivo' }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BARRA DE GESTÃO E CONTROLE DA SESSÃO VR (INICIAR / ENCERRAR SALA) -->
-        <div class="session-master-bar-glass">
-          <div class="session-master-header">
-            <div class="session-master-info">
-              <div class="session-pulse-indicator" :class="{ 'is-active': isSalaAtiva(sala) }">
-                <span class="pulse-ring" v-if="isSalaAtiva(sala)"></span>
-                <span class="status-core-dot"></span>
-              </div>
-              <div class="session-title-wrap">
-                <div class="session-title-row">
-                  <h2 class="session-master-title">Controle Geral da Sala VR</h2>
-                  <span :class="['session-state-pill', isSalaAtiva(sala) ? 'state-active' : 'state-idle']">
-                    {{ isSalaAtiva(sala) ? 'Simulação em Andamento' : 'Simulação em Espera' }}
-                  </span>
-                </div>
-                <p class="session-master-desc">
-                  {{ isSalaAtiva(sala) ? 'A sala está ativa e conectada ao headset. Utilize os botões para controlar a sessão ou encerrá-la.' : 'A sala está inativa no momento. Clique em "Iniciar a Sala" para liberar a simulação e os comandos no óculos VR.' }}
-                </p>
-              </div>
-            </div>
-
-            <div class="session-master-buttons">
-              <!-- Botão 1: Iniciar Sala -->
-              <button
-                type="button"
-                class="btn-session-action btn-start-room"
-                :disabled="isSalaAtiva(sala) || iniciandoSala || encerrandoSala || !podeModificarEControlar"
-                @click="iniciarSalaVR"
-                :title="isSalaAtiva(sala) ? 'A sala já está ativa' : !podeModificarEControlar ? 'Requer FacilitadorPlus' : 'Iniciar a sala e simulação no óculos VR'"
-              >
-                <span v-if="iniciandoSala" class="btn-spinner-session"></span>
-                <svg v-else viewBox="0 0 24 24" fill="currentColor" class="session-icon-svg">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-                <div class="btn-session-text">
-                  <span class="btn-main-label">{{ iniciandoSala ? 'Iniciando...' : 'Iniciar a Sala' }}</span>
-                  <span class="btn-sub-label">{{ isSalaAtiva(sala) ? 'Sala já Ativa' : 'Transmitir ao VR' }}</span>
-                </div>
-              </button>
-
-              <!-- Botão 2: Encerrar Sala -->
-              <button
-                type="button"
-                class="btn-session-action btn-end-room"
-                :disabled="!isSalaAtiva(sala) || iniciandoSala || encerrandoSala || !podeModificarEControlar"
-                @click="encerrarSalaVR"
-                :title="!isSalaAtiva(sala) ? 'A sala já está inativa' : !podeModificarEControlar ? 'Requer FacilitadorPlus' : 'Encerrar a simulação e finalizar a sessão no óculos VR'"
-              >
-                <span v-if="encerrandoSala" class="btn-spinner-session"></span>
-                <svg v-else viewBox="0 0 24 24" fill="currentColor" class="session-icon-svg">
-                  <rect x="5" y="5" width="14" height="14" rx="2"></rect>
-                </svg>
-                <div class="btn-session-text">
-                  <span class="btn-main-label">{{ encerrandoSala ? 'Encerrando...' : 'Encerrar a Sala' }}</span>
-                  <span class="btn-sub-label">{{ !isSalaAtiva(sala) ? 'Sala Inativa' : 'Finalizar no VR' }}</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <!-- Toast de Feedback de Sessão -->
-          <Transition name="fade-fast">
-            <div v-if="feedbackSessao" class="session-feedback-toast" :class="feedbackSessao.tipo">
-              <span class="session-toast-icon">{{ feedbackSessao.tipo === 'success' ? '⚡' : '⚠️' }}</span>
-              <span class="session-toast-text">{{ feedbackSessao.texto }}</span>
-            </div>
-          </Transition>
-        </div>
-
-        <!-- Alerta de Modo Somente Leitura para Instituições sem FacilitadorPlus -->
-        <div v-if="isInstituicao && !isFacilitadorPlus" class="instituicao-readonly-alert">
-          <div class="readonly-alert-icon">👁️</div>
-          <div class="readonly-alert-text">
-            <div class="readonly-title-wrap">
-              <strong>Acesso Institucional — Modo Somente Leitura</strong>
-              <span class="readonly-tag-badge">Apenas Visualização</span>
-            </div>
-            <p>Sua instituição tem acesso para acompanhar e visualizar esta sala. Modificações no óculos VR, troca de participantes, exclusão de sala ou controle em tempo real exigem a permissão <strong>FacilitadorPlus = true</strong> no cadastro institucional.</p>
-          </div>
-        </div>
-
-        <!-- Alerta de Bloqueio quando Sala está Ativa -->
-        <div v-if="isSalaAtiva(sala)" class="sala-ativa-lock-alert">
-          <div class="lock-alert-icon">🔒</div>
-          <div class="lock-alert-text">
-            <strong>Sala Ativa no Momento</strong>
-            <p>Esta sala está em execução ativa no óculos VR. Não é possível conectar outro óculos, desconectar o dispositivo, alternar o participante ou excluir a sala enquanto a situação for Ativa.</p>
-          </div>
-        </div>
-
-        <!-- Canvas Amplo em Duas Colunas para Configuração e Futuras Funcionalidades -->
-        <div class="room-canvas-grid" :class="{ 'has-dropdown-open': menuOculosAberto }">
+        <!-- PAINEL SPLIT SCREEN (ESTILO DIDASCALIAS APPLE GLASS) -->
+        <div class="console-split-layout">
           
-          <!-- COLUNA 1: Dispositivo VR -->
-          <div class="canvas-card-module" :class="{ 'module-locked': isSalaAtiva(sala), 'is-collapsed': !menu1Aberto, 'has-dropdown-open': menuOculosAberto }">
-            <div 
-              class="module-header-row clickable-accordion-header"
-              role="button"
-              tabindex="0"
-              @click="toggleMenu1"
-              @keydown.enter.prevent="toggleMenu1"
-              @keydown.space.prevent="toggleMenu1"
-              :title="menu1Aberto ? 'Clique para recolher menu' : 'Clique para expandir menu'"
-            >
-              <div class="module-number-badge">01</div>
-              <div class="module-header-text">
-                <div class="module-title-wrap">
-                  <h3 class="module-title">Dispositivo VR</h3>
-                  <span v-if="selectedActiveOculos" class="hardware-status-badge connected">
-                    <span class="pulse-dot"></span> Hardware Conectado
-                  </span>
-                  <span v-else class="hardware-status-badge pending">
-                    <span class="idle-dot"></span> Seleção Pendente
-                  </span>
-                </div>
-                <p class="module-desc">Óculos físico vinculado para executar a simulação imersiva</p>
-
-                <!-- Resumo quando colapsado -->
-                <div v-if="!menu1Aberto" class="module-collapsed-summary">
-                  <span class="summary-chip">
-                    🥽 {{ selectedOculosObj ? (selectedOculosObj.modelo || 'Óculos VR') + ' (N° ' + (selectedOculosObj.numero_oculos || selectedOculosObj.id) + ')' : 'Nenhum dispositivo vinculado' }}
-                  </span>
-                </div>
+          <!-- ============================================== -->
+          <!-- COLUNA DA ESQUERDA: ALUNOS, CENÁRIOS E SONS     -->
+          <!-- ============================================== -->
+          <div class="console-left-column">
+            
+            <!-- SEÇÃO 1: ALUNOS VIRTUAIS -->
+            <div class="students-section">
+              <div class="section-title-row">
+                <span class="section-title">Alunos</span>
+                <span class="section-badge-counter">{{ alunosVR.length }} estudantes 3D</span>
+                <span v-if="!isSalaAtiva(sala)" class="hint-sala-inativa-pill">⚠️ Sala Inativa: Inicie a sala para disparar</span>
               </div>
 
-              <!-- Chevron Animado -->
-              <div class="accordion-chevron-box" :class="{ 'is-flipped': menu1Aberto }">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </div>
-            </div>
+              <div class="students-track notranslate" translate="no">
+                <div v-if="alunosVR.length === 0" class="no-students-banner">
+                  ⚠️ Nenhum aluno 3D sincronizado nesta sala virtual.
+                </div>
 
-            <!-- Corpo Colapsável do Módulo 1 -->
-            <Transition name="accordion-slide">
-              <div v-if="menu1Aberto" class="module-collapsible-body">
-                <!-- Custom Dropdown Moderno de Seleção de Óculos VR -->
-                <div 
-                  class="custom-oculos-dropdown-container" 
-                  ref="dropdownOculosRef"
-                  :class="{ 'is-open': menuOculosAberto, 'is-disabled': salvandoAtivos || isSalaAtiva(sala) || !podeModificarEControlar }"
+                <!-- Botões de Aluno (Estilo Didascalias: Vidro com borda suave, ciano luminoso quando selecionado) -->
+                <button
+                  v-for="aluno in alunosVR"
+                  :key="aluno.nome"
+                  type="button"
+                  class="student-glass-card"
+                  :class="{ 
+                    'is-selected': alunoAlvoSelecionado === aluno.nome,
+                    'is-tea': aluno.isTEA,
+                    'is-tdah': aluno.isTDAH
+                  }"
+                  @click="selecionarAluno(aluno.nome)"
                 >
-                  <!-- Trigger Button / Campo Visível -->
-                  <div 
-                    class="custom-oculos-trigger"
-                    role="button"
-                    tabindex="0"
-                    @click="toggleMenuOculos"
-                    @keydown.enter.prevent="toggleMenuOculos"
-                    @keydown.space.prevent="toggleMenuOculos"
-                    :class="{ 'is-disabled': salvandoAtivos || isSalaAtiva(sala) || !podeModificarEControlar }"
-                  >
-                    <div class="trigger-left">
-                      <div 
-                        class="headset-icon-box" 
-                        :class="{ 'has-selection': selectedActiveOculos }"
-                        style="width: 38px; height: 38px; min-width: 38px; max-width: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;"
-                      >
-                        <span v-if="selectedActiveOculos" style="font-size: 1.25rem;">🥽</span>
-                        <svg 
-                          v-else 
-                          viewBox="0 0 24 24" 
-                          width="20" 
-                          height="20" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          stroke-width="2" 
-                          style="width: 20px; height: 20px; min-width: 20px; max-width: 20px; display: block;"
-                          class="vr-headset-svg"
-                        >
-                          <path d="M2 10a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-4l-2-2h-4l-2 2H4a2 2 0 0 1-2-2v-6z"></path>
-                          <circle cx="8" cy="13" r="2"></circle>
-                          <circle cx="16" cy="13" r="2"></circle>
-                          <line x1="10" y1="13" x2="14" y2="13"></line>
-                        </svg>
-                      </div>
-                      <div class="trigger-label-group">
-                        <template v-if="selectedOculosObj">
-                          <span class="selected-oculos-title notranslate" translate="no">
-                            {{ selectedOculosObj.modelo || 'Óculos VR' }}
-                          </span>
-                          <span class="selected-oculos-sub notranslate" translate="no">
-                            N° {{ selectedOculosObj.numero_oculos || selectedOculosObj.id }} • Vinculado
-                          </span>
-                        </template>
-                        <template v-else>
-                          <span class="placeholder-oculos-title">Nenhum (Clique para escolher um óculos)</span>
-                          <span class="placeholder-oculos-sub">Toque para selecionar um dispositivo VR</span>
-                        </template>
-                      </div>
-                    </div>
-
-                    <div 
-                      class="trigger-chevron" 
-                      :class="{ 'is-flipped': menuOculosAberto }"
-                      style="width: 22px; height: 22px; min-width: 22px; max-width: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
-                    >
-                      <svg 
-                        viewBox="0 0 24 24" 
-                        width="18" 
-                        height="18" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        stroke-width="2.5"
-                        style="width: 18px; height: 18px; min-width: 18px; max-width: 18px; display: block;"
-                      >
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <!-- Menu Popover Elegante em Glassmorphism -->
-                  <Transition name="dropdown-scale">
-                    <div v-if="menuOculosAberto" class="custom-oculos-menu" @click.stop>
-                      <div class="menu-header-hint">
-                        <span>DISPOSITIVOS VR DA INSTITUIÇÃO</span>
-                        <span class="count-badge-sub">{{ oculosDisponiveis.length }}</span>
-                      </div>
-
-                      <div class="menu-items-scroll">
-                        <!-- Opção 1: Nenhum (Desconectar) -->
-                        <div 
-                          class="oculos-menu-item item-none"
-                          :class="{ 'is-active': selectedActiveOculos === null }"
-                          @click="selecionarOculos(null)"
-                        >
-                          <div class="item-icon-box none-icon" style="width: 36px; height: 36px; min-width: 36px; max-width: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; min-width: 18px; max-width: 18px; display: block;">
-                              <circle cx="12" cy="12" r="10"></circle>
-                              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-                            </svg>
-                          </div>
-                          <div class="item-text-info">
-                            <span class="item-title">Nenhum Dispositivo</span>
-                            <span class="item-desc">Não vincular óculos a esta sala no momento</span>
-                          </div>
-                          <div v-if="selectedActiveOculos === null" class="item-check">✓</div>
-                        </div>
-
-                        <!-- Lista de Óculos Reais -->
-                        <div 
-                          v-for="oculos in oculosDisponiveis" 
-                          :key="oculos.id"
-                          class="oculos-menu-item"
-                          :class="{ 
-                            'is-active': selectedActiveOculos === oculos.id,
-                            'is-blocked': isOculosEmOutraSalaAtiva(oculos.id)
-                          }"
-                          @click="selecionarOculos(oculos.id)"
-                        >
-                          <div class="item-icon-box vr-icon" :class="{ 'is-active': selectedActiveOculos === oculos.id }" style="width: 36px; height: 36px; min-width: 36px; max-width: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            🥽
-                          </div>
-
-                          <div class="item-text-info">
-                            <div class="item-title-row">
-                              <span class="item-title notranslate" translate="no">{{ oculos.modelo || 'Óculos VR' }}</span>
-                              <span class="badge-numero-oculos notranslate" translate="no">N° {{ oculos.numero_oculos || oculos.id }}</span>
-                            </div>
-                            <span v-if="isOculosEmOutraSalaAtiva(oculos.id)" class="item-status-warning">
-                              🔒 Em uso em outra sala ativa (Bloqueado)
-                            </span>
-                            <span v-else-if="selectedActiveOculos === oculos.id" class="item-status-active">
-                              ✓ Dispositivo selecionado para esta sala
-                            </span>
-                            <span v-else class="item-status-avail">
-                              Disponível para conectar
-                            </span>
-                          </div>
-
-                          <div class="item-action-indicator">
-                            <span v-if="selectedActiveOculos === oculos.id" class="badge-selected-pill">
-                              Selecionado
-                            </span>
-                            <span v-else-if="isOculosEmOutraSalaAtiva(oculos.id)" class="badge-locked-pill">
-                              Bloqueado
-                            </span>
-                            <span v-else class="action-arrow-sub">
-                              Conectar &rarr;
-                            </span>
-                          </div>
-                        </div>
-
-                        <div v-if="oculosDisponiveis.length === 0" class="empty-dropdown-message">
-                          <span class="empty-icon">🥽</span>
-                          <span>Nenhum óculos cadastrado nesta instituição.</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Transition>
-                </div>
-
-                <!-- Telemetria do Headset Selecionado -->
-                <div v-if="selectedOculosObj" class="active-headset-preview">
-                  <div class="preview-glow-bar"></div>
-                  <div class="preview-icon-col">
-                    <span class="hw-icon">🥽</span>
-                  </div>
-                  <div class="preview-meta-col">
-                    <span class="preview-model notranslate" translate="no">{{ selectedOculosObj.modelo || 'Óculos VR' }}</span>
-                    <span class="preview-sub notranslate" translate="no">Identificação: N° {{ selectedOculosObj.numero_oculos || selectedOculosObj.id }} • Transmissão Ativa</span>
-                  </div>
-                  <div class="preview-state-tag">
-                    <span class="tag-signal">ONLINE</span>
-                  </div>
-                </div>
-
-                <p v-if="!podeModificarEControlar" class="readonly-inline-hint">
-                  🔒 Alteração de óculos bloqueada: apenas visualização (Requer FacilitadorPlus).
-                </p>
-
-                <p v-if="oculosDisponiveis.length === 0" class="empty-warn-tech">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="warn-svg"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                  Nenhum óculos VR cadastrado nesta instituição. Solicite à instituição o cadastro de óculos.
-                </p>
-              </div>
-            </Transition>
-          </div>
-
-          <!-- COLUNA 2: Participante Ativo -->
-          <div class="canvas-card-module" :class="{ 'module-locked': isSalaAtiva(sala), 'is-collapsed': !menu2Aberto }">
-            <div 
-              class="module-header-row clickable-accordion-header"
-              role="button"
-              tabindex="0"
-              @click="toggleMenu2"
-              @keydown.enter.prevent="toggleMenu2"
-              @keydown.space.prevent="toggleMenu2"
-              :title="menu2Aberto ? 'Clique para recolher menu' : 'Clique para expandir menu'"
-            >
-              <div class="module-number-badge">02</div>
-              <div class="module-header-text">
-                <div class="module-title-wrap">
-                  <h3 class="module-title">Quem vai usar o óculos agora?</h3>
-                  <span class="count-tech-badge">
-                    {{ sala.targetType === 'aluno' ? '1 Aluno Vinculado' : participantesFiltrados.length + ' Alunos na Turma' }}
-                  </span>
-                </div>
-                <p class="module-desc">
-                  {{ sala.targetType === 'aluno' ? 'Estudante titular associado a esta sessão' : 'Selecione o participante que executará a sessão VR no momento' }}
-                </p>
-
-                <!-- Resumo quando colapsado -->
-                <div v-if="!menu2Aberto" class="module-collapsed-summary">
-                  <span class="summary-chip">
-                    👤 Ativo: <strong class="notranslate" translate="no">{{ participanteAtivoNome }}</strong>
-                  </span>
-                </div>
-              </div>
-
-              <!-- Chevron Animado -->
-              <div class="accordion-chevron-box" :class="{ 'is-flipped': menu2Aberto }">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
+                  <span class="student-card-name">{{ aluno.nome }}</span>
+                  <span v-if="aluno.isTEA" class="student-cond-chip chip-tea" title="Espectro Autista">TEA</span>
+                  <span v-else-if="aluno.isTDAH" class="student-cond-chip chip-tdah" title="Déficit / Hiperatividade">TDAH</span>
+                </button>
               </div>
             </div>
 
-            <!-- Corpo Colapsável do Módulo 2 -->
-            <Transition name="accordion-slide">
-              <div v-if="menu2Aberto" class="module-collapsible-body">
-                <!-- Caso 1: Aluno Individual -->
-                <div v-if="sala.targetType === 'aluno'" class="digital-student-pass">
-                  <div class="pass-accent-light"></div>
-                  <div class="pass-avatar-box notranslate" translate="no">
-                    {{ participantesSala[0]?.nome?.charAt(0).toUpperCase() || 'A' }}
-                  </div>
-                  <div class="pass-details-box">
-                    <div class="pass-identity-row">
-                      <span class="pass-role-micro">PARTICIPANTE TITULAR</span>
-                      <span class="pass-chip-verified">✓ Vinculado</span>
-                    </div>
-                    <strong class="pass-name notranslate" translate="no">{{ participantesSala[0]?.nome || 'Alunos não encontrados' }}</strong>
-                    <span class="pass-email notranslate" translate="no">{{ participantesSala[0]?.email || '' }}</span>
-                  </div>
+            <!-- DIVISÓRIA SUTIL DIDASCALIAS -->
+            <div class="didas-subtle-divider"></div>
+
+            <!-- SEÇÃO 2: CENÁRIOS / CONFLITOS VR (DISPARO IMEDIATO) -->
+            <div class="scenarios-section">
+              <div class="scenarios-header-row">
+                <div class="scenarios-title-wrap">
+                  <h2 class="scenarios-title">Cenários</h2>
+                  <span class="scenarios-subtitle">Clique em um cenário para disparar imediatamente no VR</span>
                 </div>
 
-                <!-- Caso 2: Grupo / Turma -->
-                <div v-else class="group-selection-zone">
-                  <!-- Barra de Busca Rápida -->
-                  <div class="tech-search-bar">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input 
-                      type="text" 
-                      v-model="filtroParticipante" 
-                      placeholder="Pesquisar aluno por nome ou e-mail..." 
-                      class="tech-search-input"
-                      :disabled="isSalaAtiva(sala) || !podeModificarEControlar"
-                    />
-                    <button v-if="filtroParticipante" class="clear-search-btn" @click="filtroParticipante = ''">&times;</button>
-                  </div>
-
-                  <!-- Lista de Participantes em Cards Tecnológicos -->
-                  <div class="student-cards-scrollable">
-                    <div 
-                      v-for="aluno in participantesFiltrados" 
-                      :key="aluno.id"
-                      class="student-hud-card"
-                      :class="{ 
-                        'selected-active': selectedActiveParticipant === aluno.id,
-                        'is-disabled': isSalaAtiva(sala) || !podeModificarEControlar
-                      }"
-                      @click="!isSalaAtiva(sala) && podeModificarEControlar && (selectedActiveParticipant = aluno.id)"
-                    >
-                      <div class="st-card-profile">
-                        <div class="st-hud-avatar notranslate" translate="no">
-                          {{ aluno.nome?.charAt(0).toUpperCase() || 'A' }}
-                        </div>
-                        <div class="st-hud-meta">
-                          <span class="st-hud-name notranslate" translate="no">{{ aluno.nome }}</span>
-                          <span class="st-hud-email notranslate" translate="no">{{ aluno.email }}</span>
-                        </div>
-                      </div>
-
-                      <div class="st-hud-action">
-                        <span v-if="selectedActiveParticipant === aluno.id" class="check-mark-tech">✓ Ativo</span>
-                        <span v-else class="inactive-radio-circle"></span>
-                      </div>
-                    </div>
-
-                    <div v-if="participantesFiltrados.length === 0" class="empty-search-alert">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="empty-search-svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                      <span>Alunos não encontrados{{ filtroParticipante ? ' para a busca realizada.' : '.' }}</span>
-                    </div>
-                  </div>
-
-                  <p v-if="!podeModificarEControlar" class="readonly-inline-hint">
-                    🔒 Seleção de participante bloqueada: apenas visualização (Requer FacilitadorPlus).
-                  </p>
-                </div>
-              </div>
-            </Transition>
-          </div>
-        </div>
-
-        <!-- MÓDULO 03: CENTRO DE INTERAÇÃO E COMANDOS VR EM TEMPO REAL -->
-        <div 
-          class="vr-interaction-module-glass" 
-          :class="{ 
-            'is-active-session': isSalaAtiva(sala), 
-            'is-locked-session': !isSalaAtiva(sala),
-            'is-collapsed': !menu3Aberto || !isSalaAtiva(sala)
-          }"
-        >
-          <!-- Header do Módulo (Clicável SOMENTE se a sala estiver ativa!) -->
-          <div 
-            class="module-header-row vr-interact-header"
-            :class="{ 
-              'clickable-accordion-header': isSalaAtiva(sala), 
-              'header-locked-disabled': !isSalaAtiva(sala),
-              'is-open': menu3Aberto && isSalaAtiva(sala)
-            }"
-            @click="toggleMenu3"
-            :role="isSalaAtiva(sala) ? 'button' : undefined"
-            :tabindex="isSalaAtiva(sala) ? 0 : undefined"
-            @keydown.enter.prevent="toggleMenu3"
-            @keydown.space.prevent="toggleMenu3"
-            :title="!isSalaAtiva(sala) ? 'Menu bloqueado: a sala precisa estar Ativa no óculos VR para ser aberta' : (menu3Aberto ? 'Clique para recolher menu' : 'Clique para expandir menu')"
-          >
-            <div class="module-header-left">
-              <div class="module-number-badge accent-purple">03</div>
-              <div class="module-header-text">
-                <div class="module-title-wrap">
-                  <h3 class="module-title">Interagir com o Óculos VR (Comandos em Tempo Real)</h3>
-                  <span v-if="!isSalaAtiva(sala)" class="hardware-status-badge locked-badge">
-                    <span class="lock-icon-mini">🔒</span> Bloqueado (Sala Inativa)
-                  </span>
-                  <span v-else-if="!podeModificarEControlar" class="hardware-status-badge locked-badge">
-                    <span class="lock-icon-mini">👁️</span> Acompanhamento (Sem FacilitadorPlus)
-                  </span>
-                  <span v-else class="hardware-status-badge live-active-pulse">
-                    <span class="pulse-beacon-dot"></span> Transmissão VR Aberta
-                  </span>
-                </div>
-                <p class="module-desc">
-                  {{ !isSalaAtiva(sala) ? 'Menu indisponível enquanto a sala estiver inativa. Inicie a simulação no óculos VR para liberar a interação.' : (!podeModificarEControlar ? 'Modo de acompanhamento: visualize os alunos e o histórico de comandos em tempo real. Disparo de novos comandos requer FacilitadorPlus.' : 'Dispare conflitos comportamentais diretamente no headset VR durante a simulação ativa.') }}
-                </p>
-
-                <!-- Resumo quando colapsado e sala ativa -->
-                <div v-if="!menu3Aberto && isSalaAtiva(sala)" class="module-collapsed-summary">
-                  <span v-if="!podeModificarEControlar" class="summary-chip locked">
-                    👁️ Acompanhamento em tempo real • {{ alunosVR.length > 0 ? alunosVR.length + ' Alunos 3D' : 'Alunos n encontrados' }} 
-                    <template v-if="metricasCondicoesVR.tea > 0 || metricasCondicoesVR.tdah > 0">
-                      ({{ metricasCondicoesVR.tea }} TEA • {{ metricasCondicoesVR.tdah }} TDAH)
-                    </template>
-                    (Somente Leitura)
-                  </span>
-                  <span v-else class="summary-chip purple">
-                    ⚡ 19 Comandos VR Prontos • {{ alunosVR.length > 0 ? alunosVR.length + ' Alunos 3D' : 'Alunos n encontrados' }} 
-                    <template v-if="metricasCondicoesVR.tea > 0 || metricasCondicoesVR.tdah > 0">
-                      ({{ metricasCondicoesVR.tea }} TEA • {{ metricasCondicoesVR.tdah }} TDAH)
-                    </template>
-                    • (Clique para abrir)
-                  </span>
-                </div>
-                <!-- Alerta quando sala inativa (Sem opção de clicar) -->
-                <div v-else-if="!isSalaAtiva(sala)" class="module-collapsed-summary">
-                  <span class="summary-chip locked">
-                    🔒 Interação desabilitada: Sala Inativa (Sem opção de abrir)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="header-right-controls">
-              <!-- Contador de Alunos no VR ou Fallback com breakdown TEA/TDAH -->
-              <div class="vr-students-count-chip" v-if="alunosVR.length > 0">
-                <div class="count-main-row">
-                  <span class="count-num">{{ alunosVR.length }}</span>
-                  <span class="count-lbl">Alunos 3D</span>
-                </div>
-                <div class="count-cond-pills" v-if="metricasCondicoesVR.tea > 0 || metricasCondicoesVR.tdah > 0">
-                  <span v-if="metricasCondicoesVR.tea > 0" class="cond-pill-mini cond-tea" title="Alunos com TEA">
-                    🧩 {{ metricasCondicoesVR.tea }} TEA
-                  </span>
-                  <span v-if="metricasCondicoesVR.tdah > 0" class="cond-pill-mini cond-tdah" title="Alunos com TDAH">
-                    ⚡ {{ metricasCondicoesVR.tdah }} TDAH
-                  </span>
-                </div>
-              </div>
-              <div class="vr-students-notfound-chip" v-else>
-                <span class="notfound-icon">⚠️</span>
-                <span class="notfound-lbl">Alunos n encontrados</span>
-              </div>
-
-              <!-- Chevron de Abertura ou Cadeado Bloqueado -->
-              <div v-if="isSalaAtiva(sala)" class="accordion-chevron-box" :class="{ 'is-flipped': menu3Aberto }">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </div>
-              <div v-else class="accordion-lock-box" title="Bloqueado: Sala Inativa (Sem opção de clique)">
-                <span style="font-size: 1.15rem;">🔒</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Corpo do Módulo 3 (Visível SOMENTE quando menu3Aberto for true E a sala estiver ativa) -->
-          <Transition name="accordion-slide">
-            <div v-if="menu3Aberto && isSalaAtiva(sala)" class="module-collapsible-body">
-              
-              <!-- Banner informativo se a sala estiver inativa -->
-              <div v-if="!isSalaAtiva(sala)" class="vr-interact-locked-banner">
-                <div class="locked-banner-icon">🔒</div>
-                <div class="locked-banner-content">
-                  <strong>Interação com o Óculos VR Desabilitada</strong>
-                  <p>
-                    Esta sala está com a situação <strong>Inativa</strong>. Para interagir com o óculos e disparar conflitos aos alunos virtuais, inicie a simulação no óculos VR para torná-la <strong>Ativa</strong>.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Conteúdo Interativo -->
-              <div class="vr-interact-body" :class="{ 'controls-disabled': !isSalaAtiva(sala) }">
-                
-                <!-- Banner Informativo para Instituições sem FacilitadorPlus -->
-                <div v-if="!podeModificarEControlar" class="vr-readonly-mode-banner">
-                  <span class="vr-readonly-banner-icon">🔒</span>
-                  <div class="vr-readonly-banner-text">
-                    <strong>Modo de Acompanhamento (Somente Leitura)</strong>
-                    <p>Sua instituição pode acompanhar os alunos virtuais e o histórico de comandos em tempo real. O disparo de conflitos e controle da sala exige permissão <strong>FacilitadorPlus = true</strong>.</p>
-                  </div>
-                </div>
-                
-                <!-- ETAPA A: Selecionar o Aluno Alvo -->
-                <div class="interact-step-box">
-                  <div class="step-subhead">
-                    <div class="step-subhead-left">
-                      <span class="subhead-badge">Passo 1</span>
-                      <span class="subhead-title">Selecione o Aluno Alvo no VR:</span>
-                    </div>
-                    <div class="step-subhead-right">
-                      <span v-if="alunoAlvoSelecionado && alunoAlvoObj && (alunoAlvoObj.isTEA || alunoAlvoObj.isTDAH)" class="selected-target-pill notranslate" translate="no">
-                        Aluno Selecionado: <strong>{{ alunoAlvoObj.nome }}</strong>
-                        <span :class="['pill-cond-badge', alunoAlvoObj.isTEA ? 'cond-tea' : 'cond-tdah']">
-                          <span class="cond-icon">{{ alunoAlvoObj.isTEA ? '🧩' : '⚡' }}</span>
-                          {{ alunoAlvoObj.condicao }}
-                        </span>
-                      </span>
-                      <span v-else-if="alunoAlvoSelecionado" class="selected-target-pill notranslate" translate="no">
-                        Aluno Selecionado: <strong>{{ alunoAlvoSelecionado }}</strong>
-                      </span>
-                      <span v-else-if="alunosVR.length === 0" class="notfound-target-pill">
-                        Alunos n encontrados
-                      </span>
-                      <span v-else class="pending-target-pill">
-                        Selecione um aluno abaixo
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Barra de Filtros e Busca dos Alunos Virtuais VR -->
-                  <div v-if="alunosVR.length > 0" class="vr-students-filter-toolbar">
-                    <!-- Tabs de Filtro focadas em TEA e TDAH -->
-                    <div class="vr-condition-tabs">
-                      <button
-                        type="button"
-                        class="cond-tab-btn"
-                        :class="{ 'active': filtroCondicaoAlunoVR === 'todos' }"
-                        @click="filtroCondicaoAlunoVR = 'todos'"
-                      >
-                        <span class="cond-tab-icon">👥</span>
-                        <span class="cond-tab-label">Todos</span>
-                        <span class="cond-tab-count">{{ metricasCondicoesVR.total }}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        class="cond-tab-btn tab-tea"
-                        :class="{ 'active': filtroCondicaoAlunoVR === 'tea' }"
-                        @click="filtroCondicaoAlunoVR = 'tea'"
-                      >
-                        <span class="cond-tab-icon">🧩</span>
-                        <span class="cond-tab-label">Alunos com TEA</span>
-                        <span class="cond-tab-count highlight-count">{{ metricasCondicoesVR.tea }}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        class="cond-tab-btn tab-tdah"
-                        :class="{ 'active': filtroCondicaoAlunoVR === 'tdah' }"
-                        @click="filtroCondicaoAlunoVR = 'tdah'"
-                      >
-                        <span class="cond-tab-icon">⚡</span>
-                        <span class="cond-tab-label">Alunos com TDAH</span>
-                        <span class="cond-tab-count highlight-count">{{ metricasCondicoesVR.tdah }}</span>
-                      </button>
-                    </div>
-
-                    <!-- Busca Rápida de Aluno Virtual -->
-                    <div class="vr-students-search-box">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mini-search-svg">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                      </svg>
-                      <input
-                        type="text"
-                        v-model="buscaAlunoVR"
-                        placeholder="Buscar aluno ou carteira..."
-                        class="mini-search-input"
-                      />
-                      <button v-if="buscaAlunoVR" type="button" class="mini-clear-btn" @click="buscaAlunoVR = ''">&times;</button>
-                    </div>
-                  </div>
-
-                  <!-- Lista de Chips de Alunos 3D -->
-                  <div v-if="alunosVRFiltrados.length > 0" class="vr-target-students-grid">
-                    <button
-                      v-for="aluno in alunosVRFiltrados"
-                      :key="aluno.key"
-                      type="button"
-                      class="vr-student-target-btn notranslate"
-                      translate="no"
-                      :class="[
-                        { 
-                          'is-selected': alunoAlvoSelecionado === aluno.nome,
-                          'btn-disabled': !podeModificarEControlar,
-                          'is-tea-target': aluno.isTEA,
-                          'is-tdah-target': aluno.isTDAH,
-                          'is-typical-target': aluno.isTipico
-                        }
-                      ]"
-                      :disabled="!isSalaAtiva(sala) || !podeModificarEControlar"
-                      @click="podeModificarEControlar && (alunoAlvoSelecionado = aluno.nome)"
-                      :title="aluno.isTEA ? `${aluno.nome} (${aluno.key}) • Aluno com TEA` : aluno.isTDAH ? `${aluno.nome} (${aluno.key}) • Aluno com TDAH` : `${aluno.nome} (${aluno.key})`"
-                    >
-                      <!-- Avatar com indicador apenas se for TEA ou TDAH -->
-                      <div class="target-avatar-wrapper" :class="{ 'avatar-special': aluno.isTEA || aluno.isTDAH }">
-                        <div class="target-avatar">
-                          {{ (aluno.nome || 'A').charAt(0).toUpperCase() }}
-                        </div>
-                        <span v-if="aluno.isTEA" class="avatar-cond-dot dot-tea" title="Condição: TEA">🧩</span>
-                        <span v-else-if="aluno.isTDAH" class="avatar-cond-dot dot-tdah" title="Condição: TDAH">⚡</span>
-                      </div>
-
-                      <div class="target-name-wrap">
-                        <span class="target-name">{{ aluno.nome }}</span>
-                        <div class="target-meta-row">
-                          <span class="target-slot-code">{{ aluno.key }}</span>
-                          <!-- Badge Chamativo SOMENTE para TEA e TDAH -->
-                          <span v-if="aluno.isTEA" class="student-neuro-badge badge-tea">
-                            <span class="badge-icon">🧩</span> TEA
-                          </span>
-                          <span v-else-if="aluno.isTDAH" class="student-neuro-badge badge-tdah">
-                            <span class="badge-icon">⚡</span> TDAH
-                          </span>
-                        </div>
-                      </div>
-
-                      <span v-if="alunoAlvoSelecionado === aluno.nome" class="target-check-badge">✓</span>
-                    </button>
-                  </div>
-
-                  <!-- Se o filtro não encontrou alunos -->
-                  <div v-else-if="alunosVR.length > 0" class="empty-vr-filter-box">
-                    <span class="empty-filter-text">Nenhum aluno virtual encontrado para os critérios selecionados.</span>
-                    <button type="button" class="btn-clear-vr-filter" @click="filtroCondicaoAlunoVR = 'todos'; buscaAlunoVR = ''">
-                      Limpar Filtros (Ver Todos)
-                    </button>
-                  </div>
-
-                  <!-- Fallback: Alunos não encontrados -->
-                  <div v-else class="empty-vr-students-warn">
-                    <div class="empty-warn-icon-box">⚠️</div>
-                    <div class="empty-warn-text">
-                      <strong class="empty-warn-title">Alunos n encontrados</strong>
-                      <p class="empty-warn-desc">
-                        Nenhum aluno virtual foi registrado no nó <code>Alunos</code> desta sala no óculos VR.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- ETAPA B: Selecionar Ação / Conflito Comportamental -->
-                <div class="interact-step-box" style="margin-top: 24px;">
-                  <div class="step-subhead-row">
-                    <div class="step-subhead">
-                      <span class="subhead-badge">Passo 2</span>
-                      <span class="subhead-title">Selecione a Ação / Conflito a Disparar:</span>
-                    </div>
-
-                    <!-- Barra de Busca Rápida de Ações -->
-                    <div class="action-search-bar">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-mini-svg">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                      </svg>
-                      <input
-                        type="text"
-                        v-model="buscaAcao"
-                        placeholder="Filtrar por nome ou código..."
-                        class="action-search-input"
-                        :disabled="!isSalaAtiva(sala) || !podeModificarEControlar"
-                      />
-                      <button v-if="buscaAcao" class="clear-search-btn" @click="buscaAcao = ''">&times;</button>
-                    </div>
-                  </div>
-
-                  <!-- Filtros de Categorias -->
-                  <div class="action-category-pills">
-                    <button
-                      type="button"
-                      v-for="cat in categoriasAcoes"
-                      :key="cat.id"
-                      class="cat-pill"
-                      :class="[
-                        { active: categoriaAcaoAtiva === cat.id },
-                        cat.id === 'tea' ? 'cat-pill-tea' : '',
-                        cat.id === 'tdah' ? 'cat-pill-tdah' : ''
-                      ]"
-                      :disabled="!isSalaAtiva(sala) || !podeModificarEControlar"
-                      @click="podeModificarEControlar && (categoriaAcaoAtiva = cat.id)"
-                    >
-                      <span class="cat-icon">{{ cat.icon }}</span>
-                      <span>{{ cat.label }}</span>
-                      <span class="cat-count">{{ cat.count }}</span>
-                    </button>
-                  </div>
-
-                  <!-- Grid dos 19 Cards de Ações -->
-                  <div class="vr-actions-cards-grid">
-                    <div
-                      v-for="acao in acoesFiltradas"
-                      :key="acao.id"
-                      class="action-choice-card"
-                      :class="{ 
-                        'is-selected': acaoSelecionada === acao.id, 
-                        'card-disabled': !isSalaAtiva(sala) || !podeModificarEControlar,
-                        'is-condition-locked': !isAcaoDisponivelParaAluno(acao),
-                        'is-exclusive-tea': acao.condicaoExclusiva === 'TEA',
-                        'is-exclusive-tdah': acao.condicaoExclusiva === 'TDAH'
-                      }"
-                      :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : acao.desc"
-                      @click="selecionarAcao(acao)"
-                    >
-                      <div class="action-card-top">
-                        <span class="action-emoji-symbol">{{ acao.icon }}</span>
-                        <div class="action-top-badges">
-                          <!-- Badge de Exclusividade TEA / TDAH -->
-                          <span v-if="acao.condicaoExclusiva === 'TEA'" class="action-exclusive-badge badge-tea" title="Ação exclusiva para alunos com TEA">
-                            🧩 Exclusivo TEA
-                          </span>
-                          <span v-else-if="acao.condicaoExclusiva === 'TDAH'" class="action-exclusive-badge badge-tdah" title="Ação exclusiva para alunos com TDAH">
-                            ⚡ Exclusivo TDAH
-                          </span>
-                          <!-- Badge de Bloqueio se indisponível -->
-                          <span v-if="!isAcaoDisponivelParaAluno(acao)" class="action-lock-badge" :title="getAcaoLockReason(acao)">
-                            🔒 Indisponível
-                          </span>
-                          <!-- Badge de Selecionada -->
-                          <span v-else-if="acaoSelecionada === acao.id" class="action-selected-tag">
-                            ✓ Selecionada
-                          </span>
-                        </div>
-                      </div>
-
-                      <h5 class="action-title-text">{{ acao.label }}</h5>
-                      <p class="action-desc-text">{{ acao.desc }}</p>
-
-                      <div class="action-card-footer">
-                        <code class="action-code-tag">{{ acao.id }}</code>
-                        <span v-if="!isAcaoDisponivelParaAluno(acao)" class="action-lock-hint">
-                          Requer {{ acao.condicaoExclusiva }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div v-if="acoesFiltradas.length === 0" class="empty-actions-result">
-                      <p>Nenhuma ação encontrada para "{{ buscaAcao }}".</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Toast de Feedback de Envio -->
-                <Transition name="fade-slide">
-                  <div v-if="feedbackComando" class="command-feedback-toast" :class="feedbackComando.tipo">
-                    <span class="toast-indicator-icon">{{ feedbackComando.tipo === 'success' ? '⚡' : '⚠️' }}</span>
-                    <span class="toast-indicator-text">{{ feedbackComando.texto }}</span>
-                  </div>
-                </Transition>
-
-                <!-- BARRA DE DISPARO FINAL -->
-                <div class="command-dispatch-bar">
-                  <div class="dispatch-summary">
-                    <div class="summary-target-info">
-                      <span class="summary-lbl">DESTINATÁRIO (ALUNO ALVO):</span>
-                      <div class="summary-val-wrap notranslate" translate="no">
-                        <strong class="summary-val">
-                          {{ alunoAlvoSelecionado ? alunoAlvoSelecionado : (alunosVR.length === 0 ? 'Alunos n encontrados' : 'Selecione no Passo 1') }}
-                        </strong>
-                        <span v-if="alunoAlvoObj && (alunoAlvoObj.isTEA || alunoAlvoObj.isTDAH)" :class="['summary-cond-pill', alunoAlvoObj.isTEA ? 'cond-tea' : 'cond-tdah']">
-                          <span class="cond-icon-mini">{{ alunoAlvoObj.isTEA ? '🧩' : '⚡' }}</span>
-                          {{ alunoAlvoObj.condicao }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="summary-sep">→</div>
-                    <div class="summary-action-info">
-                      <span class="summary-lbl">CONFLITO / AÇÃO VR:</span>
-                      <strong class="summary-val">
-                        {{ acaoSelecionadaObj ? acaoSelecionadaObj.label + ' (' + acaoSelecionadaObj.id + ')' : 'Selecione no Passo 2' }}
-                      </strong>
-                    </div>
-                  </div>
-
+                <!-- Filtros Rápidos de Categoria -->
+                <div class="scenarios-filter-pills">
                   <button
+                    v-for="cat in categoriasFiltro"
+                    :key="cat.id"
                     type="button"
-                    class="btn-dispatch-command"
-                    :disabled="enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !acaoSelecionada || !alunoAlvoSelecionado || (acaoSelecionadaObj && !isAcaoDisponivelParaAluno(acaoSelecionadaObj)) || alunosVR.length === 0"
-                    @click="enviarComandoVR"
+                    class="filter-pill-btn"
+                    :class="{ 'is-active': categoriaAcaoAtiva === cat.id }"
+                    @click="categoriaAcaoAtiva = cat.id"
                   >
-                    <span v-if="enviandoComando" class="btn-spinner-tech"></span>
-                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="dispatch-svg">
-                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                    </svg>
-                    <span>
-                      {{ enviandoComando ? 'Transmitindo para o Óculos...' : !isSalaAtiva(sala) ? 'Interação Bloqueada (Sala Inativa)' : (!podeModificarEControlar ? 'Controle Bloqueado (Requer FacilitadorPlus)' : (alunosVR.length === 0 ? 'Alunos n encontrados' : 'Enviar Comando para o Óculos VR')) }}
-                    </span>
+                    <span>{{ cat.icon }}</span>
+                    <span>{{ cat.label }}</span>
                   </button>
                 </div>
+              </div>
 
-                <!-- SEÇÃO DEDICADA: FALA DO ESTUDANTE / TEXT-TO-SPEECH (TTS) -->
-                <div class="command-tts-card">
-                  <div class="tts-card-header">
-                    <div class="tts-header-left">
-                      <span class="tts-header-icon">🗣️</span>
-                      <div class="tts-header-text">
-                        <div class="tts-header-title-row">
-                          <span class="tts-header-title">Comunicação por Voz / Fala do Estudante (Text-to-Speech)</span>
-                          <span class="tts-tech-tag">TTS em Tempo Real</span>
-                        </div>
-                        <span class="tts-header-desc">
-                          Digite uma fala personalizada para o estudante selecionado verbalizar imediatamente na simulação VR.
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Indicador do Destinatário Alvo -->
-                    <div class="tts-target-indicator notranslate" translate="no">
-                      <span class="tts-target-label">ALUNO ALVO:</span>
-                      <div v-if="alunoAlvoSelecionado" class="tts-target-pill">
-                        <strong class="tts-target-name">{{ alunoAlvoSelecionado }}</strong>
-                        <span v-if="alunoAlvoObj && (alunoAlvoObj.isTEA || alunoAlvoObj.isTDAH)" :class="['summary-cond-pill', alunoAlvoObj.isTEA ? 'cond-tea' : 'cond-tdah']">
-                          <span class="cond-icon-mini">{{ alunoAlvoObj.isTEA ? '🧩' : '⚡' }}</span>
-                          {{ alunoAlvoObj.condicao }}
-                        </span>
-                      </div>
-                      <span v-else class="tts-target-warning">
-                        ⚠️ Selecione no Passo 1
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="tts-card-body">
-                    <div class="tts-input-wrapper">
-                      <div class="tts-input-prefix">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tts-input-svg">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        v-model="textoTTS"
-                        class="tts-text-input"
-                        placeholder="Digite o que o aluno deve falar... (Ex: 'Professor, posso tirar uma dúvida?', 'Esqueci meu caderno!')"
-                        :disabled="!isSalaAtiva(sala) || !podeModificarEControlar || alunosVR.length === 0"
-                        maxlength="300"
-                        @keydown.enter.prevent="enviarTTS"
-                      />
-                      <button
-                        v-if="textoTTS"
-                        type="button"
-                        class="tts-clear-btn"
-                        title="Limpar texto"
-                        @click="textoTTS = ''"
-                      >
-                        &times;
-                      </button>
-                      <span class="tts-char-counter" :class="{ 'is-limit': textoTTS.length >= 280 }">
-                        {{ textoTTS.length }}/300
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="btn-tts-send"
-                      :disabled="enviandoTTS || cooldownDisparo || enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado || !textoTTS.trim() || alunosVR.length === 0"
-                      @click="enviarTTS"
-                      :title="!alunoAlvoSelecionado ? 'Selecione um aluno alvo no Passo 1' : !textoTTS.trim() ? 'Digite o texto da fala' : `Enviar fala para ${alunoAlvoSelecionado} no VR`"
-                    >
-                      <span v-if="enviandoTTS" class="btn-spinner-tech"></span>
-                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tts-send-svg">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                      </svg>
-                      <span>
-                        {{ enviandoTTS ? 'Transmitindo Fala...' : 'Enviar Fala para o Óculos VR' }}
-                      </span>
-                    </button>
-                  </div>
-
-                  <!-- Barra de orientações / requisitos -->
-                  <div class="tts-card-footer">
-                    <span class="tts-requirement-hint" :class="{ 'req-valid': alunoAlvoSelecionado && textoTTS.trim() }">
-                      <span class="req-icon">{{ (alunoAlvoSelecionado && textoTTS.trim()) ? '✓' : 'ℹ️' }}</span>
-                      Requisitos obrigatórios: Texto no campo + Aluno alvo selecionado no Passo 1.
-                    </span>
-                    <span class="tts-shortcut-hint">
-                      Pressione <kbd class="kbd-badge">Enter</kbd> no campo para envio rápido
+              <!-- Grade de Cenários (Estilo Didascalias: Cards com acento suave e disparo imediato) -->
+              <div class="scenarios-grid">
+                <button
+                  v-for="acao in acoesFiltradas"
+                  :key="acao.id"
+                  type="button"
+                  class="scenario-glass-card"
+                  :class="{
+                    'is-firing': acaoEmDisparo === acao.id,
+                    'is-locked': !isAcaoDisponivelParaAluno(acao),
+                    'is-tea-exclusive': acao.condicaoExclusiva === 'TEA',
+                    'is-tdah-exclusive': acao.condicaoExclusiva === 'TDAH'
+                  }"
+                  :disabled="acaoEmDisparo !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar || !isAcaoDisponivelParaAluno(acao)"
+                  @click="dispararCenarioImediato(acao)"
+                  :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : `Disparar ${acao.label} imediatamente para ${alunoAlvoSelecionado}`"
+                >
+                  <div class="scenario-card-header">
+                    <span class="scenario-icon-box">{{ acao.icon }}</span>
+                    <span v-if="acao.condicaoExclusiva" class="scenario-cond-badge" :class="acao.condicaoExclusiva.toLowerCase()">
+                      {{ acao.condicaoExclusiva }}
                     </span>
                   </div>
-                </div>
 
-                <!-- SEÇÃO DEDICADA: EFEITOS SONOROS / SONS DA SALA VR (EXTENSÍVEL) -->
-                <div class="command-sounds-card">
-                  <div class="sounds-card-header">
-                    <div class="sounds-header-left">
-                      <span class="sounds-header-icon">🔔</span>
-                      <div class="sounds-header-text">
-                        <div class="sounds-header-title-row">
-                          <span class="sounds-header-title">Efeitos Sonoros & Ambientação da Sala</span>
-                          <span class="sounds-tech-tag">Áudio Imersivo VR</span>
-                        </div>
-                        <span class="sounds-header-desc">
-                          Dispare efeitos sonoros em tempo real no ambiente virtual da sala para ambientação e testes sensoriais.
-                        </span>
-                      </div>
-                    </div>
+                  <strong class="scenario-card-title">{{ acao.label }}</strong>
+                  <span class="scenario-card-desc">{{ acao.desc }}</span>
+
+                  <div class="scenario-card-footer">
+                    <span v-if="acaoEmDisparo === acao.id" class="btn-spinner-tech red"></span>
+                    <span v-else class="instant-trigger-badge">⚡ Disparo Imediato</span>
                   </div>
-
-                  <div class="sounds-card-body">
-                    <div class="sounds-buttons-grid">
-                      <button
-                        v-for="som in SONS_VR"
-                        :key="som.id"
-                        type="button"
-                        class="btn-vr-sound"
-                        :class="{ 'is-active-loading': somEmExecucao === som.id }"
-                        :disabled="somEmExecucao !== '' || cooldownDisparo || enviandoComando || enviandoTTS || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar"
-                        @click="dispararSomVR(som)"
-                        :title="!isSalaAtiva(sala) ? 'Inicie a sala para disparar sons' : !podeModificarEControlar ? 'Requer FacilitadorPlus' : `Disparar som de ${som.label} no VR`"
-                      >
-                        <span v-if="somEmExecucao === som.id" class="btn-spinner-tech"></span>
-                        <span v-else class="sound-item-icon">{{ som.icon }}</span>
-                        <div class="sound-item-info">
-                          <strong class="sound-item-title">{{ som.label }}</strong>
-                          <span class="sound-item-desc">{{ som.desc }}</span>
-                        </div>
-                        <div class="sound-item-badge">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sound-wave-svg">
-                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                          </svg>
-                          <span>Tocar no VR</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="sounds-card-footer">
-                    <span class="sounds-hint">
-                      💡 <strong>Extensibilidade:</strong> Os sons são transmitidos via comando do facilitador para o headset VR e novos botões podem ser adicionados conforme a necessidade pedagógica.
-                    </span>
-                  </div>
-                </div>
-
-                <!-- BARRA DE REINICIALIZAÇÃO (BOTÕES VERMELHOS DE RESET VR) -->
-                <div class="command-reset-bar">
-                  <div class="reset-bar-header">
-                    <div class="reset-header-left">
-                      <span class="reset-header-icon">🔄</span>
-                      <div class="reset-header-text">
-                        <span class="reset-header-title">Comandos de Reinicialização no VR</span>
-                        <span class="reset-header-desc">Restaure o comportamento inicial/neutro dos estudantes na simulação</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="reset-buttons-grid">
-                    <!-- Botão 1: Reiniciar Estudante Selecionado -->
-                    <button
-                      type="button"
-                      class="btn-vr-danger btn-reset-single"
-                      :disabled="enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado || alunosVR.length === 0"
-                      @click="reiniciarEstudanteSelecionado"
-                      :title="!alunoAlvoSelecionado ? 'Selecione um estudante no Passo 1 para reiniciar' : `Reiniciar comportamento de ${alunoAlvoSelecionado} no VR`"
-                    >
-                      <span v-if="enviandoReset === 'single'" class="btn-spinner-tech"></span>
-                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="reset-btn-svg">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                        <path d="M4 4v5h5"></path>
-                        <path d="M4 9a8 8 0 0 1 14.14-3.14"></path>
-                      </svg>
-                      <div class="btn-reset-content">
-                        <span class="btn-reset-title">Reiniciar Estudante Selecionado</span>
-                        <span class="btn-reset-subtitle notranslate" translate="no">
-                          {{ alunoAlvoSelecionado ? `Alvo: ${alunoAlvoSelecionado}` : '(Selecione no Passo 1)' }}
-                        </span>
-                      </div>
-                    </button>
-
-                    <!-- Botão 2: Reiniciar Todos Estudantes -->
-                    <button
-                      type="button"
-                      class="btn-vr-danger btn-reset-all"
-                      :disabled="enviandoComando || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || alunosVR.length === 0"
-                      @click="reiniciarTodosEstudantes"
-                      title="Reiniciar todos os estudantes virtuais da sala para o estado inicial"
-                    >
-                      <span v-if="enviandoReset === 'all'" class="btn-spinner-tech"></span>
-                      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="reset-btn-svg">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        <path d="M21 8V3h-5"></path>
-                        <path d="M21 3l-6 6"></path>
-                      </svg>
-                      <div class="btn-reset-content">
-                        <span class="btn-reset-title">Reiniciar Todos Estudantes</span>
-                        <span class="btn-reset-subtitle">
-                          {{ alunosVR.length > 0 ? `Todos os ${alunosVR.length} alunos virtuais` : 'Turma completa' }}
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- FEED / HISTÓRICO DE COMANDOS RECENTES DISPARADOS -->
-                <div v-if="historicoComandos.length > 0" class="recent-commands-feed">
-                  <div class="feed-header-row">
-                    <span class="feed-title">Histórico Recente de Comandos nesta Sessão:</span>
-                    <span class="feed-count-badge">{{ historicoComandos.length }} disparado(s)</span>
-                  </div>
-                  <div class="commands-feed-list">
-                    <div
-                      v-for="cmd in historicoComandos"
-                      :key="cmd.key"
-                      class="command-feed-item"
-                      :class="{ 
-                        'is-reset-item': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                        'is-tts-item': cmd.tipo_conflito === 'TextToSpeech',
-                        'is-sound-item': cmd.tipo_conflito === 'PlaySound',
-                        'is-start-item': cmd.tipo_conflito === 'StartRoom',
-                        'is-end-item': cmd.tipo_conflito === 'EndRoom'
-                      }"
-                    >
-                      <div class="feed-item-left">
-                        <span 
-                          class="feed-status-dot" 
-                          :class="{ 
-                            'dot-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                            'dot-tts': cmd.tipo_conflito === 'TextToSpeech',
-                            'dot-sound': cmd.tipo_conflito === 'PlaySound',
-                            'dot-start': cmd.tipo_conflito === 'StartRoom',
-                            'dot-end': cmd.tipo_conflito === 'EndRoom'
-                          }"
-                        ></span>
-                        <span class="feed-time">{{ formatHoraComando(cmd.timestamp) }}</span>
-                        <div class="feed-aluno-pill notranslate" translate="no" :class="{ 'all-students-pill': !cmd.aluno_alvo }">
-                          <span class="feed-aluno-name">{{ cmd.aluno_alvo || (cmd.tipo_conflito === 'PlaySound' ? 'Ambiente da Sala' : (cmd.tipo_conflito === 'StartRoom' || cmd.tipo_conflito === 'EndRoom') ? 'Sessão da Sala' : 'Todos os Estudantes') }}</span>
-                          <span v-if="cmd.aluno_alvo && getCondicaoAlunoVR(cmd.aluno_alvo) && (getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' || getCondicaoAlunoVR(cmd.aluno_alvo) === 'TDAH')" :class="['feed-cond-tag', getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? 'cond-tea' : 'cond-tdah']">
-                            {{ getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? '🧩 TEA' : '⚡ TDAH' }}
-                          </span>
-                        </div>
-                        <span class="feed-arrow">→</span>
-                        <span 
-                          class="feed-conflito" 
-                          :class="{ 
-                            'conflito-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                            'conflito-tts': cmd.tipo_conflito === 'TextToSpeech',
-                            'conflito-sound': cmd.tipo_conflito === 'PlaySound',
-                            'conflito-start': cmd.tipo_conflito === 'StartRoom',
-                            'conflito-end': cmd.tipo_conflito === 'EndRoom'
-                          }"
-                        >
-                          {{ getNomeConflito(cmd.tipo_conflito, cmd) }}
-                          <code class="feed-code">({{ cmd.tipo_conflito }}{{ cmd.som ? `:${cmd.som}` : '' }})</code>
-                        </span>
-
-                        <!-- Mensagem verbalizada se for TextToSpeech -->
-                        <div v-if="cmd.tipo_conflito === 'TextToSpeech' && cmd.mensagem" class="feed-tts-bubble" title="Texto verbalizado pelo aluno">
-                          <span class="feed-tts-bubble-icon">💬</span>
-                          <span class="feed-tts-bubble-text">“{{ cmd.mensagem }}”</span>
-                        </div>
-
-                        <!-- Efeito sonoro se for PlaySound -->
-                        <div v-if="cmd.tipo_conflito === 'PlaySound' && cmd.som" class="feed-sound-bubble" title="Efeito sonoro disparado">
-                          <span class="feed-sound-bubble-icon">🔔</span>
-                          <span class="feed-sound-bubble-text">{{ cmd.som === 'SchoolBell' ? 'Sirene Escolar' : cmd.som }}</span>
-                        </div>
-                      </div>
-                      <span 
-                        class="feed-check-tag" 
-                        :class="{ 
-                          'check-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                          'check-tts': cmd.tipo_conflito === 'TextToSpeech',
-                          'check-sound': cmd.tipo_conflito === 'PlaySound',
-                          'check-start': cmd.tipo_conflito === 'StartRoom',
-                          'check-end': cmd.tipo_conflito === 'EndRoom'
-                        }"
-                      >
-                        {{ cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' ? '🔄 Reset VR' : cmd.tipo_conflito === 'TextToSpeech' ? '🗣️ Fala no VR' : cmd.tipo_conflito === 'PlaySound' ? '🔔 Áudio VR' : cmd.tipo_conflito === 'StartRoom' ? '▶ Início' : cmd.tipo_conflito === 'EndRoom' ? '⏹ Término' : '✓ No VR' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
+                </button>
               </div>
             </div>
-          </Transition>
-        </div>
 
-        <!-- Feedback Messages -->
-        <div v-if="mensagemAtivos" class="feedback-toast-box">
-          <div :class="['feedback-toast-card', tipoMensagem]">
-            <span v-if="tipoMensagem === 'success'">✓</span>
-            <span v-else>⚠️</span>
-            <span>{{ mensagemAtivos }}</span>
-          </div>
-        </div>
+            <!-- DIVISÓRIA SUTIL DIDASCALIAS -->
+            <div class="didas-subtle-divider"></div>
 
-        <!-- Seção de Ações Principais -->
-        <div class="actions-zone-glass">
-          <button 
-            type="button"
-            class="btn-confirm-session-tech"
-            :disabled="salvandoAtivos || isSalaAtiva(sala) || !podeModificarEControlar"
-            @click="salvarConfiguracoesAtivas"
-          >
-            <span v-if="salvandoAtivos" class="btn-spinner-tech"></span>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-action-svg">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            <span class="btn-confirm-text">
-              {{ salvandoAtivos ? 'Gravando Alterações...' : !podeModificarEControlar ? 'Somente Leitura (Requer FacilitadorPlus)' : isSalaAtiva(sala) ? 'Alterações Bloqueadas (Sala Ativa)' : 'Confirmar e Salvar Sessão' }}
-            </span>
-          </button>
-        </div>
+            <!-- SEÇÃO 3: SONS DA SALA (EMBAIXO DOS CENÁRIOS, EXTENSÍVEL) -->
+            <div class="sounds-section">
+              <div class="sounds-title-row">
+                <div class="sounds-title-wrap">
+                  <span class="sounds-icon-tag">🔔</span>
+                  <span class="sounds-title">Sons da Sala</span>
+                  <span class="sounds-tech-badge">Áudio Imersivo</span>
+                </div>
+                <span class="sounds-hint-text">Dispare efeitos sonoros diretamente no headset</span>
+              </div>
 
-        <!-- Zona de Perigo (Exclusão da Sala) -->
-        <div class="danger-zone-box">
-          <div class="danger-zone-info">
-            <span class="danger-zone-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              Excluir Sala VR
-            </span>
-            <span class="danger-zone-desc">
-              Exclui permanentemente esta sala e todos os dados de configuração vinculados a ela.
-            </span>
+              <!-- Grade de Botões de Sons (Extensível para novos botões de som) -->
+              <div class="sounds-grid">
+                <button
+                  v-for="som in SONS_VR"
+                  :key="som.id"
+                  type="button"
+                  class="sound-glass-card"
+                  :class="{ 'is-firing': somEmExecucao === som.id }"
+                  :disabled="somEmExecucao !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar"
+                  @click="dispararSomVR(som)"
+                  :title="`Tocar ${som.label} no VR`"
+                >
+                  <span v-if="somEmExecucao === som.id" class="btn-spinner-tech amber"></span>
+                  <span v-else class="sound-card-icon">{{ som.icon }}</span>
+                  <div class="sound-card-info">
+                    <strong class="sound-card-label">{{ som.label }}</strong>
+                    <span class="sound-card-desc">{{ som.desc }}</span>
+                  </div>
+                  <span class="sound-fire-pill">Tocar no VR</span>
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          <button 
-            type="button"
-            class="btn-delete-room-full" 
-            :disabled="excluindoSala || isSalaAtiva(sala) || !podeModificarEControlar"
-            @click="confirmarExclusaoSala"
-          >
-            <span v-if="excluindoSala" class="btn-spinner-delete"></span>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-            <span>{{ !podeModificarEControlar ? 'Exclusão Bloqueada (Requer FacilitadorPlus)' : isSalaAtiva(sala) ? 'Exclusão Bloqueada (Sala Ativa)' : 'Excluir Sala VR' }}</span>
-          </button>
-        </div>
+          <!-- ============================================== -->
+          <!-- COLUNA DA DIREITA: PAINEL DO ALUNO & TTS       -->
+          <!-- ============================================== -->
+          <div class="console-right-column">
+            
+            <!-- PARTE SUPERIOR: NOME DO ALUNO & CONDIÇÃO -->
+            <div class="student-meta-panel">
+              <div class="student-header-box">
+                <span class="student-kicker">ESTUDANTE SELECIONADO:</span>
+                <!-- Nome Aluno em Destaque -->
+                <h1 class="student-main-name notranslate" translate="no">
+                  {{ alunoAlvoSelecionado || 'Nenhum Aluno' }}
+                </h1>
 
+                <!-- Condição do Aluno (TDAH / TEA / Típico) -->
+                <div class="student-cond-row">
+                  <div v-if="alunoAlvoObj" class="student-cond-badge-wrap">
+                    <span :class="['student-cond-pill', alunoAlvoObj.isTEA ? 'pill-tea' : alunoAlvoObj.isTDAH ? 'pill-tdah' : 'pill-tipico']">
+                      <span class="pill-cond-icon">{{ alunoAlvoObj.isTEA ? '🧩' : alunoAlvoObj.isTDAH ? '⚡' : '👤' }}</span>
+                      {{ alunoAlvoObj.condicao }}
+                    </span>
+                  </div>
+                  <span v-else class="student-cond-pill pill-tipico">👤 Estudante Típico</span>
+                </div>
+              </div>
+
+              <!-- Botão de Reiniciar Aluno Selecionado -->
+              <button
+                type="button"
+                class="btn-reset-student-didas"
+                :disabled="enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado"
+                @click="reiniciarEstudanteSelecionado"
+                :title="`Reiniciar o comportamento de ${alunoAlvoSelecionado} no VR`"
+              >
+                <span v-if="enviandoReset === 'single'" class="btn-spinner-tech"></span>
+                <span v-else class="btn-reset-icon">🔄</span>
+                <span>Reiniciar Estudante</span>
+              </button>
+            </div>
+
+            <!-- PARTE INFERIOR: FALA DO ESTUDANTE (TEXT-TO-SPEECH) -->
+            <div class="student-tts-panel">
+              <div class="tts-header-row">
+                <span class="tts-icon">🗣️</span>
+                <span class="tts-heading">Fala do Estudante (TTS)</span>
+              </div>
+
+              <div class="tts-textarea-wrapper">
+                <textarea
+                  v-model="textoTTS"
+                  class="tts-glass-textarea"
+                  placeholder="Insira texto aqui..."
+                  rows="4"
+                  maxlength="300"
+                  :disabled="!isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado"
+                  @keydown.enter.exact.prevent="enviarTTS"
+                ></textarea>
+                <span class="tts-counter-tag">{{ textoTTS.length }}/300</span>
+              </div>
+
+              <!-- Botão ENVIAR TEXTO no Estilo Didascalias -->
+              <button
+                type="button"
+                class="btn-didas-tts-send"
+                :disabled="enviandoTTS || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar || !alunoAlvoSelecionado || !textoTTS.trim()"
+                @click="enviarTTS"
+                :title="!alunoAlvoSelecionado ? 'Selecione um aluno' : !textoTTS.trim() ? 'Digite um texto' : 'Enviar fala para o aluno no VR'"
+              >
+                <span v-if="enviandoTTS" class="btn-spinner-tech white"></span>
+                <span v-else>ENVIAR TEXTO</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
       </div>
     </main>
 
-    <!-- Modal de Confirmação de Exclusão Elegante -->
+    <!-- TOAST FLUTUANTE DE FEEDBACK GLOBAL (NÃO DESLOCA A TELA) -->
+    <Transition name="toast-slide">
+      <div v-if="feedbackComando || feedbackSessao" class="floating-feedback-toast" :class="feedbackComando ? feedbackComando.tipo : feedbackSessao.tipo">
+        <span class="toast-symbol">{{ (feedbackComando || feedbackSessao).tipo === 'success' ? '⚡' : '⚠️' }}</span>
+        <span class="toast-msg">{{ (feedbackComando || feedbackSessao).texto }}</span>
+      </div>
+    </Transition>
+
+    <!-- MODAL DE CONFIGURAÇÃO DE HARDWARE E PARTICIPANTE -->
+    <Teleport to="body">
+      <Transition name="glass-modal">
+        <div v-if="modalDispositivosAberto" class="delete-modal-overlay" @click.self="modalDispositivosAberto = false">
+          <div class="config-modal-box" @click.stop>
+            <div class="config-modal-header">
+              <div class="config-modal-title-row">
+                <span class="config-modal-icon">🥽</span>
+                <h3>Hardware VR e Participante Vinculado</h3>
+              </div>
+              <button class="config-modal-close" @click="modalDispositivosAberto = false">&times;</button>
+            </div>
+
+            <div class="config-modal-body">
+              <!-- Dispositivo VR -->
+              <div class="config-modal-field">
+                <label>ÓCULOS VR VINCULADO:</label>
+                <div class="custom-select-wrapper">
+                  <div 
+                    class="custom-select-trigger" 
+                    :class="{ 'is-open': menuOculosAberto, 'is-disabled': salvandoAtivos || isSalaAtiva(sala) || !podeModificarEControlar }"
+                    @click="toggleMenuOculos"
+                  >
+                    <span>{{ selectedOculosObj ? (selectedOculosObj.modelo || 'Óculos') + ' (N° ' + (selectedOculosObj.numero_oculos || selectedOculosObj.id) + ')' : 'Selecione um óculos VR...' }}</span>
+                    <span class="arrow-indicator">▼</span>
+                  </div>
+
+                  <div v-if="menuOculosAberto" class="custom-options-dropdown" ref="dropdownOculosRef">
+                    <div 
+                      class="custom-option" 
+                      :class="{ 'is-active': !selectedActiveOculos }"
+                      @click="selecionarOculos(null)"
+                    >
+                      Nenhum dispositivo vinculado
+                    </div>
+                    <div 
+                      v-for="oc in oculosDisponiveis" 
+                      :key="oc.id"
+                      class="custom-option"
+                      :class="{ 'is-active': selectedActiveOculos === oc.id, 'is-disabled': isOculosEmOutraSalaAtiva(oc.id) }"
+                      @click="selecionarOculos(oc.id)"
+                    >
+                      {{ oc.modelo || 'Óculos' }} (N° {{ oc.numero_oculos || oc.id }})
+                      <span v-if="isOculosEmOutraSalaAtiva(oc.id)" class="opt-locked-tag">Em uso</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Participante Vinculado -->
+              <div class="config-modal-field">
+                <label>PARTICIPANTE VINCULADO:</label>
+                <input 
+                  type="text" 
+                  v-model="filtroParticipante" 
+                  placeholder="Filtrar participante por nome ou email..." 
+                  class="config-modal-input"
+                  :disabled="isSalaAtiva(sala) || !podeModificarEControlar"
+                />
+                <div class="modal-participants-list">
+                  <div 
+                    v-for="p in participantesFiltrados" 
+                    :key="p.id"
+                    class="modal-part-item"
+                    :class="{ 'is-selected': selectedActiveParticipant === p.id }"
+                    @click="!isSalaAtiva(sala) && podeModificarEControlar && (selectedActiveParticipant = p.id)"
+                  >
+                    <strong>{{ p.nome }}</strong>
+                    <span>{{ p.email }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="config-modal-actions">
+                <button
+                  type="button"
+                  class="btn-save-hardware"
+                  :disabled="salvandoAtivos || isSalaAtiva(sala) || !podeModificarEControlar"
+                  @click="salvarConfiguracoesAtivas"
+                >
+                  <span v-if="salvandoAtivos" class="btn-spinner-tech white"></span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+
+              <div class="config-modal-danger-divider"></div>
+
+              <button
+                type="button"
+                class="btn-danger-modal-trigger"
+                :disabled="excluindoSala || isSalaAtiva(sala) || !podeModificarEControlar"
+                @click="confirmarExclusaoSala"
+              >
+                🗑️ Excluir Sala VR
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- MODAL DE HISTÓRICO DE COMANDOS -->
+    <Teleport to="body">
+      <Transition name="glass-modal">
+        <div v-if="modalHistoricoAberto" class="delete-modal-overlay" @click.self="modalHistoricoAberto = false">
+          <div class="history-modal-box" @click.stop>
+            <div class="config-modal-header">
+              <div class="config-modal-title-row">
+                <span class="config-modal-icon">📜</span>
+                <h3>Histórico de Comandos no VR</h3>
+              </div>
+              <button class="config-modal-close" @click="modalHistoricoAberto = false">&times;</button>
+            </div>
+
+            <div class="history-modal-body">
+              <div v-if="historicoComandos.length === 0" class="no-history-msg">
+                Nenhum comando disparado nesta sessão ainda.
+              </div>
+
+              <div v-else class="history-feed-list">
+                <div 
+                  v-for="cmd in historicoComandos" 
+                  :key="cmd.key" 
+                  class="history-feed-item"
+                >
+                  <span class="history-time">{{ formatHoraComando(cmd.timestamp) }}</span>
+                  <strong class="history-target">{{ cmd.aluno_alvo || (cmd.tipo_conflito === 'PlaySound' ? 'Ambiente VR' : (cmd.tipo_conflito === 'StartRoom' || cmd.tipo_conflito === 'EndRoom') ? 'Sessão VR' : 'Turma Completa') }}</strong>
+                  <span class="history-arrow">→</span>
+                  <span class="history-conflict">
+                    {{ getNomeConflito(cmd.tipo_conflito, cmd) }}
+                    <code>({{ cmd.tipo_conflito }}{{ cmd.som ? `:${cmd.som}` : '' }})</code>
+                  </span>
+                  <span v-if="cmd.tipo_conflito === 'TextToSpeech'" class="history-tts-text">“{{ cmd.mensagem }}”</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Modal de Confirmação de Exclusão -->
     <Teleport to="body">
       <Transition name="glass-modal">
         <div v-if="modalExclusaoAberto" class="delete-modal-overlay" @click.self="modalExclusaoAberto = false">
@@ -1387,23 +524,6 @@
               <span class="room-name-text notranslate" translate="no">{{ sala?.roomName }}</span>
             </div>
 
-            <div class="delete-modal-points">
-              <div class="delete-point-row">
-                <span class="bullet-dot"></span>
-                <span>O óculos conectado será desvinculado e liberado.</span>
-              </div>
-              <div class="delete-point-row">
-                <span class="bullet-dot"></span>
-                <span>O histórico de telemetria desta sala deixará de estar ativo.</span>
-              </div>
-              <div class="delete-point-row alert">
-                <span class="bullet-dot red"></span>
-                <span>Alunos não poderão mais se conectar a esta sala no óculos.</span>
-              </div>
-            </div>
-
-            <p v-if="mensagemPermissao" class="delete-error-note">{{ mensagemPermissao }}</p>
-
             <div class="delete-modal-actions">
               <button 
                 type="button" 
@@ -1421,11 +541,7 @@
                 :disabled="excluindoSala"
               >
                 <span v-if="excluindoSala" class="btn-spinner-delete"></span>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="trash-action-svg">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                <span>{{ excluindoSala ? 'Excluindo...' : 'Sim, Excluir Sala' }}</span>
+                <span v-else>Sim, Excluir Sala</span>
               </button>
             </div>
           </div>
@@ -1437,13 +553,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { database } from '../firebase'
 import { ref as dbRef, get, update, remove, query, orderByChild, equalTo, push, onValue, limitToLast } from 'firebase/database'
 import { useAuthStore } from '../stores/auth'
 import { isSalaAtiva } from '../utils/salaUtils'
-import { parseAlunosVR, calcularMetricasCondicoesVR, getCondicaoBadgeMeta } from '../utils/alunosVRUtils'
+import { parseAlunosVR } from '../utils/alunosVRUtils'
 import MenuLateral from '../components/generic/MenuLateral.vue'
 
 const router = useRouter()
@@ -1455,38 +571,7 @@ const userData = ref({})
 const sala = ref(null)
 const todasSalas = ref([])
 
-// ==========================================
-// ESTADO DOS MENUS (Iniciam minimizados por padrão)
-// ==========================================
-const menu1Aberto = ref(false)
-const menu2Aberto = ref(false)
-const menu3Aberto = ref(false)
-
-const toggleMenu1 = () => {
-  menu1Aberto.value = !menu1Aberto.value
-}
-
-const toggleMenu2 = () => {
-  menu2Aberto.value = !menu2Aberto.value
-}
-
-const toggleMenu3 = () => {
-  // Se a sala estiver inativa, o menu 3 fica minimizado SEM OPÇÃO de clicar para abrir
-  if (!isSalaAtiva(sala.value)) return
-  menu3Aberto.value = !menu3Aberto.value
-}
-
-// Se a sala transicionar para inativa no banco em tempo real, força o fechamento imediato do menu 3
-watch(
-  () => isSalaAtiva(sala.value),
-  (ativa) => {
-    if (!ativa) {
-      menu3Aberto.value = false
-    }
-  }
-)
-
-// Dropdown de Óculos
+// Dropdown de Óculos e Hardware
 const menuOculosAberto = ref(false)
 const dropdownOculosRef = ref(null)
 const oculosDisponiveis = ref([])
@@ -1497,33 +582,20 @@ const participantesSala = ref([])
 const selectedActiveParticipant = ref(null)
 const filtroParticipante = ref('')
 
-// Resumo do Participante Ativo para o Menu 2 colapsado
-const participanteAtivoNome = computed(() => {
-  if (sala.value?.targetType === 'aluno') {
-    return participantesSala.value[0]?.nome || 'Aluno Individual Titular'
-  }
-  if (selectedActiveParticipant.value) {
-    const found = participantesSala.value.find(p => p.id === selectedActiveParticipant.value)
-    return found?.nome || 'Participante Selecionado'
-  }
-  return 'Nenhum selecionado'
-})
-
 // Ações Gerais da Sala
 const salvandoAtivos = ref(false)
 const mensagemAtivos = ref('')
 const tipoMensagem = ref('')
 
-// Exclusão
+// Modais
 const modalExclusaoAberto = ref(false)
+const modalDispositivosAberto = ref(false)
+const modalHistoricoAberto = ref(false)
 const excluindoSala = ref(false)
 const mensagemPermissao = ref('')
 
-// Facilitador Nome
-const facilitadorNome = ref('Facilitador')
-
 // ==========================================
-// MÓDULO 03: INTERAÇÃO & COMANDOS VR
+// MÓDULO: CENÁRIOS VR
 // ==========================================
 const CONFLITOS_VR = [
   { id: 'TakeMaterialAll', label: 'Pegar todo o material', icon: '🎒', category: 'material', condicaoExclusiva: null, desc: 'Aluno recolhe todo o material da carteira' },
@@ -1533,31 +605,16 @@ const CONFLITOS_VR = [
   { id: 'DrawDistractedConflict', label: 'Desenhar distraído(a)', icon: '✏️', category: 'atencao', condicaoExclusiva: 'TDAH', desc: 'Fica rabiscando no caderno sem focar na aula (Exclusivo TDAH)' },
   { id: 'BotherSomeoneConflict', label: 'Incomodar colegas', icon: '👉', category: 'social', condicaoExclusiva: 'TDAH', desc: 'Interrompe e mexe com colegas próximos (Exclusivo TDAH)' },
   { id: 'GetMaterialWrongConflict', label: 'Pegar o material errado', icon: '❌', category: 'material', condicaoExclusiva: 'TDAH', desc: 'Tira da mochila itens não solicitados (Exclusivo TDAH)' },
-  /*{ id: 'SitTogether', label: 'Sentar junto', icon: '🪑', category: 'social', condicaoExclusiva: null, desc: 'Muda de lugar para sentar próximo a outro aluno' },
-  { id: 'StandUp', label: 'Levantar-se', icon: '🧍', category: 'movimento', condicaoExclusiva: null, desc: 'Levanta-se da sua carteira na sala' },
-  { id: 'LeaveDesk', label: 'Sair da carteira', icon: '🚶', category: 'movimento', condicaoExclusiva: null, desc: 'Afasta-se do seu lugar e circula pela sala' },
-  { id: 'MoveToRandomPoint', label: 'Mover-se para ponto aleatório', icon: '🎲', category: 'movimento', condicaoExclusiva: null, desc: 'Desloca-se até um ponto qualquer da sala' },
-  { id: 'RunToRandomPoint', label: 'Correr para ponto aleatório', icon: '🏃', category: 'movimento', condicaoExclusiva: null, desc: 'Corre de forma desgovernada pela sala' },
-  { id: 'AnxiousRunToRandomPoint', label: 'Correr ansiosamente', icon: '😰', category: 'emocional', condicaoExclusiva: null, desc: 'Fuga ansiosa e agitada pela sala' },
-  { id: 'MoveToFrontDoor', label: 'Mover-se para a porta da frente', icon: '🚪', category: 'movimento', condicaoExclusiva: null, desc: 'Caminha em direção à porta de entrada' },
-  { id: 'GoToFloor', label: 'Sentar no chão', icon: '🧘', category: 'comportamento', condicaoExclusiva: null, desc: 'Senta-se no chão entre as carteiras' },
-  { id: 'ChangeSits', label: 'Trocar de assento (ChangeSeats)', icon: '🔄', category: 'movimento', condicaoExclusiva: null, desc: 'Troca de carteira com outro colega' },
-  { id: 'TakeMaterialOut', label: 'Pegar o material', icon: '📖', category: 'material', condicaoExclusiva: null, desc: 'Retira seu material da mochila' },
-  { id: 'Make Students Laugh', label: 'Fazer os alunos rirem', icon: '😄', category: 'social', condicaoExclusiva: null, desc: 'Conta piada ou faz brincadeira para a turma rir' },
-  { id: 'Make Students Talk', label: 'Fazer os alunos falarem', icon: '🗣️', category: 'social', desc: 'Inicia conversa paralela em voz alta' },
-*/
-  ]
+]
 
-const acaoSelecionada = ref('')
 const categoriaAcaoAtiva = ref('todos')
-const buscaAcao = ref('')
 const alunoAlvoSelecionado = ref('')
 const textoTTS = ref('')
 const enviandoTTS = ref(false)
-const enviandoComando = ref(false)
 const enviandoReset = ref('') // 'all' | 'single' | ''
 const cooldownDisparo = ref(false)
 const feedbackComando = ref(null)
+const acaoEmDisparo = ref('')
 
 // ==========================================
 // CONTROLE DE SESSÃO DA SALA & EFEITOS SONOROS VR
@@ -1567,13 +624,14 @@ const encerrandoSala = ref(false)
 const feedbackSessao = ref(null)
 const somEmExecucao = ref('')
 
+// LISTA DE SONS VR (Extensível para novos botões de som!)
 const SONS_VR = [
   {
     id: 'SchoolBell',
     label: 'Sirene Escolar',
     icon: '🔔',
     categoria: 'ambiente',
-    desc: 'Sinal sonoro de troca/início de aula no headset VR'
+    desc: 'Sinal sonoro escolar de início/troca de aula no headset VR'
   }
 ]
 
@@ -1616,20 +674,16 @@ const isFacilitadorPlus = computed(() => {
 })
 
 const podeModificarEControlar = computed(() => {
-  // Se for universidade / instituição de ensino:
-  // APENAS SE tiver FacilitadorPlus = true pode modificar e controlar
   if (isInstituicao.value) {
     return isFacilitadorPlus.value === true
   }
-  // Facilitadores mantêm permissão de controle e configuração
   if (isFacilitador.value) {
     return true
   }
-  // Demais perfis (apenas visualização)
   return false
 })
 
-// Listeners cirúrgicos em nós folha (Zero sobrecarga de RTDB)
+// Listeners
 let unsubSituacao = null
 let unsubAlunos = null
 let unsubComandos = null
@@ -1637,75 +691,30 @@ let unsubFacilitadorPlus = null
 
 const salaId = computed(() => route.params.id)
 
-// Lista de Alunos 3D no VR (Lê estritamente de classroom_configs/${id}/Alunos com suporte a TEA / TDAH / Típico)
+// Lista de Alunos 3D no VR
 const alunosVR = computed(() => {
   if (!sala.value) return []
   return parseAlunosVR(sala.value.Alunos)
 })
 
-// Filtros para seleção de alunos no VR
-const filtroCondicaoAlunoVR = ref('todos') // 'todos' | 'tea' | 'tdah' | 'tipico'
-const buscaAlunoVR = ref('')
-
-// Métricas consolidadas das condições dos alunos virtuais
-const metricasCondicoesVR = computed(() => {
-  return calcularMetricasCondicoesVR(alunosVR.value)
-})
-
-// Alunos VR filtrados pela aba de condição (TEA, TDAH, Típico) e busca por texto
-const alunosVRFiltrados = computed(() => {
-  let list = alunosVR.value
-
-  if (filtroCondicaoAlunoVR.value === 'tea') {
-    list = list.filter(a => a.isTEA)
-  } else if (filtroCondicaoAlunoVR.value === 'tdah') {
-    list = list.filter(a => a.isTDAH)
-  } else if (filtroCondicaoAlunoVR.value === 'tipico') {
-    list = list.filter(a => a.isTipico)
-  }
-
-  if (buscaAlunoVR.value.trim()) {
-    const q = buscaAlunoVR.value.toLowerCase().trim()
-    list = list.filter(a => 
-      a.nome.toLowerCase().includes(q) || 
-      a.key.toLowerCase().includes(q) ||
-      a.condicao.toLowerCase().includes(q)
-    )
-  }
-
-  return list
-})
-
-// Objeto completo do aluno alvo selecionado no momento
+// Objeto completo do aluno alvo selecionado
 const alunoAlvoObj = computed(() => {
   if (!alunoAlvoSelecionado.value) return null
   return alunosVR.value.find(a => a.nome === alunoAlvoSelecionado.value) || null
 })
 
-// Resgata a condição de um aluno virtual dado o seu nome
-const getCondicaoAlunoVR = (nome) => {
-  if (!nome) return null
-  const al = alunosVR.value.find(a => a.nome === nome)
-  return al ? al.condicao : null
+const selecionarAluno = (nome) => {
+  alunoAlvoSelecionado.value = nome
 }
 
-const acaoSelecionadaObj = computed(() => {
-  if (!acaoSelecionada.value) return null
-  return CONFLITOS_VR.find(c => c.id === acaoSelecionada.value) || null
-})
-
-const categoriasAcoes = computed(() => {
-  return [
-    { id: 'todos', label: 'Todos', icon: '⚡', count: CONFLITOS_VR.length },
-    { id: 'tea', label: 'Exclusivos TEA', icon: '🧩', count: CONFLITOS_VR.filter(c => c.condicaoExclusiva === 'TEA').length },
-    { id: 'tdah', label: 'Exclusivos TDAH', icon: '⚡', count: CONFLITOS_VR.filter(c => c.condicaoExclusiva === 'TDAH').length },
-    { id: 'atencao', label: 'Atenção & Foco', icon: '💭', count: CONFLITOS_VR.filter(c => c.category === 'atencao').length },
-    { id: 'movimento', label: 'Movimentação', icon: '🏃', count: CONFLITOS_VR.filter(c => c.category === 'movimento').length },
-    { id: 'material', label: 'Materiais', icon: '🎒', count: CONFLITOS_VR.filter(c => c.category === 'material').length },
-    { id: 'social', label: 'Social', icon: '👥', count: CONFLITOS_VR.filter(c => c.category === 'social').length },
-    { id: 'emocional', label: 'Emocional & Conflito', icon: '🧠', count: CONFLITOS_VR.filter(c => c.category === 'emocional' || c.category === 'comportamento').length },
-  ]
-})
+const categoriasFiltro = computed(() => [
+  { id: 'todos', label: 'Todos', icon: '⚡' },
+  { id: 'tea', label: 'TEA', icon: '🧩' },
+  { id: 'tdah', label: 'TDAH', icon: '⚡' },
+  { id: 'material', label: 'Materiais', icon: '🎒' },
+  { id: 'social', label: 'Social', icon: '👥' },
+  { id: 'emocional', label: 'Comportamento', icon: '🧠' }
+])
 
 const acoesFiltradas = computed(() => {
   let list = CONFLITOS_VR
@@ -1720,42 +729,25 @@ const acoesFiltradas = computed(() => {
       list = list.filter(c => c.category === categoriaAcaoAtiva.value)
     }
   }
-  if (buscaAcao.value.trim()) {
-    const q = buscaAcao.value.toLowerCase().trim()
-    list = list.filter(c => 
-      c.label.toLowerCase().includes(q) || 
-      c.id.toLowerCase().includes(q) || 
-      c.desc.toLowerCase().includes(q) ||
-      (c.condicaoExclusiva && c.condicaoExclusiva.toLowerCase().includes(q))
-    )
-  }
   return list
 })
 
-// Verifica se a ação está liberada para o aluno selecionado no momento
 const isAcaoDisponivelParaAluno = (acao) => {
   if (!acao || !acao.condicaoExclusiva) return true
-  // Se nenhum aluno estiver selecionado ainda, ações exclusivas ficam bloqueadas
   if (!alunoAlvoObj.value) return false
-  // Alunos típicos não podem receber ações exclusivas de TEA ou TDAH
   if (alunoAlvoObj.value.isTipico) return false
-  // Exclusivas de TEA
   if (acao.condicaoExclusiva === 'TEA') {
     return alunoAlvoObj.value.isTEA === true
   }
-  // Exclusivas de TDAH
   if (acao.condicaoExclusiva === 'TDAH') {
     return alunoAlvoObj.value.isTDAH === true
   }
   return false
 }
 
-// Retorna mensagem explicativa de bloqueio quando a ação não for permitida
 const getAcaoLockReason = (acao) => {
   if (!acao || !acao.condicaoExclusiva) return ''
-  if (!alunoAlvoObj.value) {
-    return `Ação exclusiva para alunos com ${acao.condicaoExclusiva}. Selecione um aluno correspondente no Passo 1.`
-  }
+  if (!alunoAlvoObj.value) return 'Selecione um aluno para liberar'
   if (alunoAlvoObj.value.isTipico) {
     return `Indisponível: O aluno ${alunoAlvoObj.value.nome} é típico. Esta ação é exclusiva para alunos com ${acao.condicaoExclusiva}.`
   }
@@ -1768,30 +760,6 @@ const getAcaoLockReason = (acao) => {
   return ''
 }
 
-// Manipula o clique na ação prevenindo seleção de conflitos bloqueados
-const selecionarAcao = (acao) => {
-  if (!isSalaAtiva(sala.value) || !podeModificarEControlar.value) return
-  if (!isAcaoDisponivelParaAluno(acao)) {
-    const motivo = getAcaoLockReason(acao)
-    feedbackComando.value = {
-      tipo: 'error',
-      texto: motivo || `Esta ação é exclusiva para alunos com ${acao.condicaoExclusiva}.`
-    }
-    return
-  }
-  acaoSelecionada.value = acao.id
-}
-
-// Se o usuário trocar para um aluno que não tem a condição da ação selecionada, limpa a ação
-watch(
-  () => alunoAlvoSelecionado.value,
-  () => {
-    if (acaoSelecionadaObj.value && !isAcaoDisponivelParaAluno(acaoSelecionadaObj.value)) {
-      acaoSelecionada.value = ''
-    }
-  }
-)
-
 const historicoComandos = computed(() => {
   if (!sala.value || !sala.value.comando_facilitador) return []
   const cf = sala.value.comando_facilitador
@@ -1801,7 +769,7 @@ const historicoComandos = computed(() => {
       ...data
     }))
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-    .slice(0, 10)
+    .slice(0, 15)
 })
 
 const getNomeConflito = (tipoId, cmd) => {
@@ -1815,8 +783,8 @@ const getNomeConflito = (tipoId, cmd) => {
     return somObj ? somObj.label : 'Efeito Sonoro'
   }
   if (tipoId === 'TextToSpeech') return 'Fala do Estudante (TTS)'
-  if (tipoId === 'ResetAllStudents') return 'Reiniciar Todos Estudantes'
-  if (tipoId === 'ResetSingleStudent') return 'Reiniciar Estudante Selecionado'
+  if (tipoId === 'ResetAllStudents') return 'Reset Geral Turma'
+  if (tipoId === 'ResetSingleStudent') return 'Reset Estudante'
   if (tipoId === 'Hyperstimulate' || tipoId === 'HyperstimulationConflict') return 'Hiperestimulação'
   if (tipoId === 'GetDistracted' || tipoId === 'GetDistractedTEAConflict') return 'Distrair-se (TEA)'
   if (tipoId === 'BotherRandomStudents' || tipoId === 'BotherSomeoneConflict') return 'Incomodar colegas'
@@ -1831,8 +799,9 @@ const formatHoraComando = (timestamp) => {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-const enviarComandoVR = async () => {
-  if (cooldownDisparo.value) return
+// DISPARO IMEDIATO AO CLICAR EM UM CENÁRIO (Sem confirmação intermediária)
+const dispararCenarioImediato = async (acao) => {
+  if (acaoEmDisparo.value || cooldownDisparo.value) return
 
   if (!podeModificarEControlar.value) {
     feedbackComando.value = {
@@ -1845,7 +814,7 @@ const enviarComandoVR = async () => {
   if (!isSalaAtiva(sala.value)) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para enviar comandos.'
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no botão "Iniciar a Sala" para enviar comandos.'
     }
     return
   }
@@ -1853,36 +822,28 @@ const enviarComandoVR = async () => {
   if (!alunoAlvoSelecionado.value) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Por favor, selecione o aluno alvo no Passo 1.'
+      texto: 'Por favor, selecione um aluno na barra superior de Alunos.'
     }
     return
   }
 
-  if (!acaoSelecionada.value) {
+  if (!isAcaoDisponivelParaAluno(acao)) {
+    const motivo = getAcaoLockReason(acao)
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Por favor, selecione a ação ou conflito no Passo 2.'
+      texto: motivo || `Ação exclusiva para alunos com ${acao.condicaoExclusiva}.`
     }
     return
   }
 
-  if (acaoSelecionadaObj.value && !isAcaoDisponivelParaAluno(acaoSelecionadaObj.value)) {
-    const motivo = getAcaoLockReason(acaoSelecionadaObj.value)
-    feedbackComando.value = {
-      tipo: 'error',
-      texto: motivo || `Ação exclusiva para alunos com ${acaoSelecionadaObj.value.condicaoExclusiva}.`
-    }
-    return
-  }
-
-  enviandoComando.value = true
+  acaoEmDisparo.value = acao.id
   cooldownDisparo.value = true
   feedbackComando.value = null
 
   try {
     const timestampAtual = Date.now()
     const payload = {
-      tipo_conflito: acaoSelecionada.value,
+      tipo_conflito: acao.id,
       aluno_alvo: alunoAlvoSelecionado.value,
       timestamp: timestampAtual
     }
@@ -1890,10 +851,9 @@ const enviarComandoVR = async () => {
     const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
     await push(comandosRef, payload)
 
-    const acaoObj = CONFLITOS_VR.find(c => c.id === acaoSelecionada.value)
     feedbackComando.value = {
       tipo: 'success',
-      texto: `Ação "${acaoObj?.label || acaoSelecionada.value}" disparada com sucesso para ${alunoAlvoSelecionado.value} no VR!`
+      texto: `Cenário "${acao.label}" disparado para ${alunoAlvoSelecionado.value} no VR!`
     }
   } catch (error) {
     console.error("Erro ao enviar comando para o óculos VR:", error)
@@ -1902,20 +862,21 @@ const enviarComandoVR = async () => {
       texto: 'Ocorreu um erro ao enviar para o Firebase. Tente novamente.'
     }
   } finally {
-    enviandoComando.value = false
+    acaoEmDisparo.value = ''
     setTimeout(() => {
       cooldownDisparo.value = false
-    }, 1200)
+    }, 700)
     setTimeout(() => {
       if (feedbackComando.value?.tipo === 'success') {
         feedbackComando.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
+// ENVIAR TEXT-TO-SPEECH (TTS)
 const enviarTTS = async () => {
-  if (cooldownDisparo.value || enviandoTTS.value || enviandoComando.value || enviandoReset.value) return
+  if (cooldownDisparo.value || enviandoTTS.value || acaoEmDisparo.value || enviandoReset.value) return
 
   if (!podeModificarEControlar.value) {
     feedbackComando.value = {
@@ -1928,7 +889,7 @@ const enviarTTS = async () => {
   if (!isSalaAtiva(sala.value)) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para enviar comandos.'
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no botão "Iniciar a Sala" para enviar comandos.'
     }
     return
   }
@@ -1936,7 +897,7 @@ const enviarTTS = async () => {
   if (!alunoAlvoSelecionado.value) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Por favor, selecione o aluno alvo no Passo 1 para enviar o comando de fala.'
+      texto: 'Por favor, selecione um aluno para enviar o comando de fala.'
     }
     return
   }
@@ -1945,7 +906,7 @@ const enviarTTS = async () => {
   if (!mensagemLimpa) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Por favor, digite uma mensagem de texto para a fala do aluno.'
+      texto: 'Por favor, digite um texto para a fala do aluno.'
     }
     return
   }
@@ -1981,17 +942,18 @@ const enviarTTS = async () => {
     enviandoTTS.value = false
     setTimeout(() => {
       cooldownDisparo.value = false
-    }, 1200)
+    }, 700)
     setTimeout(() => {
       if (feedbackComando.value?.tipo === 'success') {
         feedbackComando.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
+// REINICIAR ESTUDANTE SELECIONADO
 const reiniciarEstudanteSelecionado = async () => {
-  if (cooldownDisparo.value || enviandoComando.value || enviandoReset.value) return
+  if (cooldownDisparo.value || acaoEmDisparo.value || enviandoReset.value) return
 
   if (!podeModificarEControlar.value) {
     feedbackComando.value = {
@@ -2012,7 +974,7 @@ const reiniciarEstudanteSelecionado = async () => {
   if (!alunoAlvoSelecionado.value) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Por favor, selecione um estudante no Passo 1 para reiniciar seu comportamento.'
+      texto: 'Por favor, selecione um estudante para reiniciar seu comportamento.'
     }
     return
   }
@@ -2040,23 +1002,24 @@ const reiniciarEstudanteSelecionado = async () => {
     console.error("Erro ao reiniciar estudante no VR:", error)
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Ocorreu um erro ao enviar comando de reinicialização para o Firebase. Tente novamente.'
+      texto: 'Ocorreu um erro ao enviar comando de reinicialização para o Firebase.'
     }
   } finally {
     enviandoReset.value = ''
     setTimeout(() => {
       cooldownDisparo.value = false
-    }, 1200)
+    }, 700)
     setTimeout(() => {
       if (feedbackComando.value?.tipo === 'success') {
         feedbackComando.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
+// REINICIAR TODOS ESTUDANTES
 const reiniciarTodosEstudantes = async () => {
-  if (cooldownDisparo.value || enviandoComando.value || enviandoReset.value) return
+  if (cooldownDisparo.value || acaoEmDisparo.value || enviandoReset.value) return
 
   if (!podeModificarEControlar.value) {
     feedbackComando.value = {
@@ -2104,24 +1067,22 @@ const reiniciarTodosEstudantes = async () => {
     console.error("Erro ao reiniciar todos os estudantes no VR:", error)
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Ocorreu um erro ao enviar comando de reinicialização para o Firebase. Tente novamente.'
+      texto: 'Ocorreu um erro ao enviar comando de reinicialização para o Firebase.'
     }
   } finally {
     enviandoReset.value = ''
     setTimeout(() => {
       cooldownDisparo.value = false
-    }, 1200)
+    }, 700)
     setTimeout(() => {
       if (feedbackComando.value?.tipo === 'success') {
         feedbackComando.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
-// ==========================================
-// MÉTODOS DE CONTROLE DA SESSÃO (INICIAR / ENCERRAR) E SONS VR
-// ==========================================
+// INICIAR SALA NO VR
 const iniciarSalaVR = async () => {
   if (iniciandoSala.value || encerrandoSala.value) return
 
@@ -2151,11 +1112,9 @@ const iniciarSalaVR = async () => {
       timestamp: timestampAtual
     }
 
-    // 1. Enviar comando para comando_facilitador
     const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
     await push(comandosRef, payload)
 
-    // 2. Atualizar situacao_atual no Firebase
     const situacaoRef = dbRef(database, `classroom_configs/${sala.value.id}/situacao_atual`)
     await update(situacaoRef, { ativo: 'sim' })
 
@@ -2167,12 +1126,9 @@ const iniciarSalaVR = async () => {
       }
     }
 
-    // Abre o menu 3 de comandos automaticamente para facilitar
-    menu3Aberto.value = true
-
     feedbackSessao.value = {
       tipo: 'success',
-      texto: 'Sala iniciada com sucesso! Simulação ativa no VR e painel de comandos liberado.'
+      texto: 'Sala iniciada com sucesso! Simulação ativa no VR e comandos liberados.'
     }
   } catch (error) {
     console.error("Erro ao iniciar sala VR:", error)
@@ -2186,10 +1142,11 @@ const iniciarSalaVR = async () => {
       if (feedbackSessao.value?.tipo === 'success') {
         feedbackSessao.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
+// ENCERRAR SALA NO VR
 const encerrarSalaVR = async () => {
   if (iniciandoSala.value || encerrandoSala.value) return
 
@@ -2219,11 +1176,9 @@ const encerrarSalaVR = async () => {
       timestamp: timestampAtual
     }
 
-    // 1. Enviar comando para comando_facilitador
     const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
     await push(comandosRef, payload)
 
-    // 2. Atualizar situacao_atual no Firebase
     const situacaoRef = dbRef(database, `classroom_configs/${sala.value.id}/situacao_atual`)
     await update(situacaoRef, { ativo: 'nao' })
 
@@ -2234,9 +1189,6 @@ const encerrarSalaVR = async () => {
         sala.value.situacao_atual.ativo = 'nao'
       }
     }
-
-    // Fecha o menu 3 de comandos já que a sala foi encerrada
-    menu3Aberto.value = false
 
     feedbackSessao.value = {
       tipo: 'success',
@@ -2254,12 +1206,13 @@ const encerrarSalaVR = async () => {
       if (feedbackSessao.value?.tipo === 'success') {
         feedbackSessao.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
+// DISPARAR SOM VR (Sirene Escolar)
 const dispararSomVR = async (som) => {
-  if (somEmExecucao.value || cooldownDisparo.value || enviandoComando.value || enviandoTTS.value || enviandoReset.value) return
+  if (somEmExecucao.value || cooldownDisparo.value || acaoEmDisparo.value || enviandoTTS.value || enviandoReset.value) return
 
   if (!podeModificarEControlar.value) {
     feedbackComando.value = {
@@ -2272,7 +1225,7 @@ const dispararSomVR = async (som) => {
   if (!isSalaAtiva(sala.value)) {
     feedbackComando.value = {
       tipo: 'error',
-      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para disparar efeitos sonoros.'
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no botão "Iniciar a Sala" para disparar efeitos sonoros.'
     }
     return
   }
@@ -2306,15 +1259,16 @@ const dispararSomVR = async (som) => {
     somEmExecucao.value = ''
     setTimeout(() => {
       cooldownDisparo.value = false
-    }, 1200)
+    }, 700)
     setTimeout(() => {
       if (feedbackComando.value?.tipo === 'success') {
         feedbackComando.value = null
       }
-    }, 6000)
+    }, 4000)
   }
 }
 
+// Helpers de Hardware e Participantes
 const selectedOculosObj = computed(() => {
   if (!selectedActiveOculos.value) return null
   return oculosDisponiveis.value.find(o => o.id === selectedActiveOculos.value) || null
@@ -2328,12 +1282,6 @@ const participantesFiltrados = computed(() => {
     (p.email && p.email.toLowerCase().includes(q))
   )
 })
-
-const getShapeName = (shape) => {
-  if (shape === 1) return 'Semicírculo'
-  if (shape === 2) return 'Circular'
-  return 'Retangular'
-}
 
 const voltar = () => {
   router.push('/home')
@@ -2365,92 +1313,162 @@ const handleClickForaOculos = (e) => {
   }
 }
 
-// Carregamento dos dados da sala e dependências
-const carregarDadosSala = async () => {
-  if (!salaId.value) {
-    isLoading.value = false
+// Salvar Configurações de Hardware e Participante
+const salvarConfiguracoesAtivas = async () => {
+  if (salvandoAtivos.value) return
+
+  if (!podeModificarEControlar.value) {
+    mensagemAtivos.value = "Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para alterar configurações."
+    tipoMensagem.value = "error"
     return
   }
 
-  try {
-    const salaRef = dbRef(database, `classroom_configs/${salaId.value}`)
-    const snap = await get(salaRef)
+  if (isSalaAtiva(sala.value)) {
+    mensagemAtivos.value = "Esta sala está com status \"Ativa\" no momento e não pode ser modificada."
+    tipoMensagem.value = "error"
+    return
+  }
 
-    if (!snap.exists()) {
-      sala.value = null
+  salvandoAtivos.value = true
+  mensagemAtivos.value = ''
+
+  try {
+    const freshSnap = await get(dbRef(database, `classroom_configs/${sala.value.id}`))
+    if (freshSnap.exists() && isSalaAtiva(freshSnap.val())) {
+      mensagemAtivos.value = "Esta sala acabou de ser ativada no óculos e não pode ser modificada."
+      tipoMensagem.value = "error"
+      return
+    }
+
+    const updates = {}
+
+    if (selectedActiveOculos.value) {
+      const qOculos = query(dbRef(database, 'classroom_configs'), orderByChild('activeHeadsetId'), equalTo(selectedActiveOculos.value))
+      const snapOculos = await get(qOculos)
+      if (snapOculos.exists()) {
+        const salasComMesmoOculos = snapOculos.val()
+        for (const sId in salasComMesmoOculos) {
+          if (sId !== sala.value.id) {
+            if (isSalaAtiva(salasComMesmoOculos[sId])) {
+              mensagemAtivos.value = "O óculos selecionado está em uso em outra sala ativa."
+              tipoMensagem.value = "error"
+              return
+            }
+            updates[`classroom_configs/${sId}/activeHeadsetId`] = null
+          }
+        }
+      }
+    }
+
+    updates[`classroom_configs/${sala.value.id}/activeParticipantId`] = selectedActiveParticipant.value
+    updates[`classroom_configs/${sala.value.id}/activeHeadsetId`] = selectedActiveOculos.value || null
+
+    if (selectedActiveOculos.value && selectedActiveOculos.value !== sala.value.activeHeadsetId) {
+      updates[`classroom_configs/${sala.value.id}/Alunos`] = null
+    }
+
+    await update(dbRef(database), updates)
+
+    if (selectedActiveOculos.value && selectedActiveOculos.value !== sala.value.activeHeadsetId) {
+      await remove(dbRef(database, `classroom_configs/${sala.value.id}/Alunos`))
+    }
+
+    sala.value.activeParticipantId = selectedActiveParticipant.value
+    sala.value.activeHeadsetId = selectedActiveOculos.value || null
+
+    mensagemAtivos.value = "Configurações de hardware e participante salvas com sucesso!"
+    tipoMensagem.value = "success"
+    modalDispositivosAberto.value = false
+  } catch (error) {
+    console.error("Erro ao salvar ativos:", error)
+    mensagemAtivos.value = "Ocorreu um erro ao salvar as configurações. Tente novamente."
+    tipoMensagem.value = "error"
+  } finally {
+    salvandoAtivos.value = false
+    setTimeout(() => {
+      mensagemAtivos.value = ''
+    }, 4000)
+  }
+}
+
+// Carregar Dados da Sala
+const carregarDadosSala = async () => {
+  isLoading.value = true
+  try {
+    const sId = salaId.value
+    if (!sId) {
       isLoading.value = false
       return
     }
 
-    sala.value = { id: salaId.value, ...snap.val() }
-    selectedActiveParticipant.value = sala.value.activeParticipantId || null
-    selectedActiveOculos.value = sala.value.activeHeadsetId || null
+    const salaRef = dbRef(database, `classroom_configs/${sId}`)
+    const snap = await get(salaRef)
 
-    const instituicaoId = sala.value.instituicaoId || userData.value.instituicaoId
+    if (snap.exists()) {
+      const data = snap.val()
+      sala.value = { id: sId, ...data }
 
-    // 1. Carregar nome do facilitador
-    if (sala.value.facilitadorId) {
-      try {
-        const fSnap = await get(dbRef(database, `usuarios/${sala.value.facilitadorId}`))
-        if (fSnap.exists()) {
-          facilitadorNome.value = fSnap.val().nome || 'Facilitador'
-        }
-      } catch (e) {
-        console.warn("Erro ao buscar facilitador:", e)
+      selectedActiveOculos.value = data.activeHeadsetId || null
+      selectedActiveParticipant.value = data.activeParticipantId || null
+
+      iniciarListenersOtimizados()
+
+      let instituicaoId = null
+      if (isInstituicao.value) {
+        instituicaoId = userData.value.id || userData.value.uid
+      } else if (data.instituicaoId) {
+        instituicaoId = data.instituicaoId
       }
+
+      if (instituicaoId) {
+        try {
+          const oculosSnap = await get(dbRef(database, `instituicoes/${instituicaoId}/oculos`))
+          if (oculosSnap.exists()) {
+            const d = oculosSnap.val()
+            oculosDisponiveis.value = Object.keys(d).map(k => ({ id: k, ...d[k] }))
+          }
+        } catch (e) {
+          console.warn("Erro ao buscar óculos:", e)
+        }
+      }
+
+      if (sala.value.targetType === 'grupo' && sala.value.targetId && instituicaoId) {
+        try {
+          const gSnap = await get(dbRef(database, `instituicoes/${instituicaoId}/grupos/${sala.value.targetId}/participantes`))
+          if (gSnap.exists()) {
+            participantesSala.value = gSnap.val() || []
+          }
+        } catch (e) {
+          console.warn("Erro ao buscar participantes do grupo:", e)
+        }
+      } else if (sala.value.targetType === 'aluno' && sala.value.targetId) {
+        try {
+          const uSnap = await get(dbRef(database, `usuarios/${sala.value.targetId}`))
+          if (uSnap.exists()) {
+            const u = uSnap.val()
+            participantesSala.value = [{ id: sala.value.targetId, nome: u.nome, email: u.email }]
+            selectedActiveParticipant.value = sala.value.targetId
+          }
+        } catch (e) {
+          console.warn("Erro ao buscar aluno titular:", e)
+        }
+      }
+
+      if (instituicaoId) {
+        try {
+          const qSalasInst = query(dbRef(database, 'classroom_configs'), orderByChild('instituicaoId'), equalTo(instituicaoId))
+          const todasSnap = await get(qSalasInst)
+          if (todasSnap.exists()) {
+            const d = todasSnap.val()
+            todasSalas.value = Object.keys(d).map(k => ({ id: k, ...d[k] }))
+          }
+        } catch (e) {
+          console.warn("Erro ao buscar salas indexadas:", e)
+        }
+      }
+    } else {
+      sala.value = null
     }
-
-    // 2. Carregar óculos disponíveis da instituição
-    if (instituicaoId) {
-      try {
-        const oculosSnap = await get(dbRef(database, `instituicoes/${instituicaoId}/oculos`))
-        if (oculosSnap.exists()) {
-          const d = oculosSnap.val()
-          oculosDisponiveis.value = Object.keys(d).map(k => ({ id: k, ...d[k] }))
-        }
-      } catch (e) {
-        console.warn("Erro ao buscar óculos:", e)
-      }
-    }
-
-    // 3. Carregar participantes
-    if (sala.value.targetType === 'grupo' && sala.value.targetId && instituicaoId) {
-      try {
-        const gSnap = await get(dbRef(database, `instituicoes/${instituicaoId}/grupos/${sala.value.targetId}/participantes`))
-        if (gSnap.exists()) {
-          participantesSala.value = gSnap.val() || []
-        }
-      } catch (e) {
-        console.warn("Erro ao buscar participantes do grupo:", e)
-      }
-    } else if (sala.value.targetType === 'aluno' && sala.value.targetId) {
-      try {
-        const uSnap = await get(dbRef(database, `usuarios/${sala.value.targetId}`))
-        if (uSnap.exists()) {
-          const u = uSnap.val()
-          participantesSala.value = [{ id: sala.value.targetId, nome: u.nome, email: u.email }]
-          selectedActiveParticipant.value = sala.value.targetId
-        }
-      } catch (e) {
-        console.warn("Erro ao buscar aluno titular:", e)
-      }
-    }
-
-    // 4. Carregar salas da instituição via QUERY INDEXADA (JAMAIS baixa a raiz inteira)
-    if (instituicaoId) {
-      try {
-        const qSalasInst = query(dbRef(database, 'classroom_configs'), orderByChild('instituicaoId'), equalTo(instituicaoId))
-        const todasSnap = await get(qSalasInst)
-        if (todasSnap.exists()) {
-          const d = todasSnap.val()
-          todasSalas.value = Object.keys(d).map(k => ({ id: k, ...d[k] }))
-        }
-      } catch (e) {
-        console.warn("Erro ao buscar salas indexadas:", e)
-      }
-    }
-
-    iniciarListenersOtimizados()
   } catch (error) {
     console.error("Erro ao carregar dados da sala:", error)
   } finally {
@@ -2458,33 +1476,22 @@ const carregarDadosSala = async () => {
   }
 }
 
-// =========================================================
-// ASSINATURAS OTIMIZADAS (Zero sobrecarga de RTDB)
-// =========================================================
 const limparListeners = () => {
-  if (unsubSituacao) {
-    unsubSituacao()
-    unsubSituacao = null
-  }
-  if (unsubAlunos) {
-    unsubAlunos()
-    unsubAlunos = null
-  }
-  if (unsubComandos) {
-    unsubComandos()
-    unsubComandos = null
-  }
-  if (unsubFacilitadorPlus) {
-    unsubFacilitadorPlus()
-    unsubFacilitadorPlus = null
-  }
+  if (unsubSituacao) unsubSituacao()
+  if (unsubAlunos) unsubAlunos()
+  if (unsubComandos) unsubComandos()
+  if (unsubFacilitadorPlus) unsubFacilitadorPlus()
+  unsubSituacao = null
+  unsubAlunos = null
+  unsubComandos = null
+  unsubFacilitadorPlus = null
 }
 
 const iniciarListenersOtimizados = () => {
   limparListeners()
   if (!salaId.value) return
 
-  // 1. Escuta estritamente o status de ativo/inativo (~15 bytes)
+  // 1. Escuta situação (ativo/inativo)
   const situacaoRef = dbRef(database, `classroom_configs/${salaId.value}/situacao_atual`)
   unsubSituacao = onValue(situacaoRef, (snap) => {
     if (sala.value) {
@@ -2492,7 +1499,7 @@ const iniciarListenersOtimizados = () => {
     }
   })
 
-  // 2. Escuta os alunos virtuais 3D da sala (~100 bytes, fires once)
+  // 2. Escuta os alunos 3D no VR
   const alunosRef = dbRef(database, `classroom_configs/${salaId.value}/Alunos`)
   unsubAlunos = onValue(alunosRef, (snap) => {
     if (sala.value) {
@@ -2505,10 +1512,10 @@ const iniciarListenersOtimizados = () => {
     }
   })
 
-  // 3. Escuta APENAS os últimos 5 comandos com limitToLast(5) (nunca baixa o histórico inteiro)
+  // 3. Escuta últimos 15 comandos
   const qComandos = query(
     dbRef(database, `classroom_configs/${salaId.value}/comando_facilitador`),
-    limitToLast(5)
+    limitToLast(15)
   )
   unsubComandos = onValue(qComandos, (snap) => {
     if (sala.value) {
@@ -2516,148 +1523,29 @@ const iniciarListenersOtimizados = () => {
     }
   })
 
-  // 4. Se for instituição, escuta FacilitadorPlus em tempo real
+  // 4. Se for instituição, escuta FacilitadorPlus
   const instId = userData.value?.instituicaoId || userData.value?.id || sala.value?.instituicaoId
   if (isInstituicao.value && instId) {
-    const plusRef = dbRef(database, `instituicoes/${instId}/FacilitadorPlus`)
-    unsubFacilitadorPlus = onValue(plusRef, (snap) => {
-      if (snap.exists()) {
-        const val = snap.val()
-        facilitadorPlusAtivo.value = val === true || val === 'true'
-      } else {
-        facilitadorPlusAtivo.value = false
-      }
+    const fPlusRef = dbRef(database, `instituicoes/${instId}/FacilitadorPlus`)
+    unsubFacilitadorPlus = onValue(fPlusRef, (snap) => {
+      const val = snap.val()
+      facilitadorPlusAtivo.value = val === true || val === 'true'
     })
-  }
-}
-
-// Salvar Configurações Ativas
-const salvarConfiguracoesAtivas = async () => {
-  if (!podeModificarEControlar.value) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Sua instituição possui acesso de visualização. É necessário ter FacilitadorPlus para alterar configurações da sala.'
-    return
-  }
-
-  if (isSalaAtiva(sala.value)) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Esta sala está ativa no momento. Não é possível alterar óculos ou participantes enquanto ela estiver ativa.'
-    return
-  }
-
-  if (selectedActiveOculos.value && isOculosEmOutraSalaAtiva(selectedActiveOculos.value)) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'O óculos selecionado já está conectado a outra sala que está com status Ativa.'
-    return
-  }
-
-  if (sala.value.targetType === 'grupo' && !selectedActiveParticipant.value) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Selecione o participante que estará ativo no momento.'
-    return
-  }
-
-  salvandoAtivos.value = true
-  mensagemAtivos.value = ''
-
-  try {
-    // Verificação em tempo real no banco
-    const freshSnap = await get(dbRef(database, `classroom_configs/${sala.value.id}`))
-    if (freshSnap.exists() && isSalaAtiva(freshSnap.val())) {
-      sala.value = { id: sala.value.id, ...freshSnap.val() }
-      tipoMensagem.value = 'error'
-      mensagemAtivos.value = 'Esta sala foi ativada recentemente no óculos! Alterações bloqueadas.'
-      return
-    }
-
-    const updates = {}
-    let mensagemExtra = ''
-
-    if (selectedActiveOculos.value) {
-      const qOculos = query(dbRef(database, 'classroom_configs'), orderByChild('activeHeadsetId'), equalTo(selectedActiveOculos.value))
-      const oculosSnap = await get(qOculos)
-      if (oculosSnap.exists()) {
-        const salasComOculos = oculosSnap.val()
-        for (const sId in salasComOculos) {
-          if (sId !== sala.value.id) {
-            if (isSalaAtiva(salasComOculos[sId])) {
-              tipoMensagem.value = 'error'
-              mensagemAtivos.value = 'O óculos selecionado está em outra sala ativa e não pode ser transferido agora.'
-              return
-            }
-            updates[`classroom_configs/${sId}/activeHeadsetId`] = null
-            mensagemExtra = ' (Óculos movido de outra sala)'
-          }
-        }
-      }
-    }
-
-    updates[`classroom_configs/${sala.value.id}/activeParticipantId`] = selectedActiveParticipant.value
-    updates[`classroom_configs/${sala.value.id}/activeHeadsetId`] = selectedActiveOculos.value || null
-    // Apaga o conjunto inteiro de Alunos (Aluno1, Aluno2, Aluno3, ...) de dentro da configuração da sala
-    updates[`classroom_configs/${sala.value.id}/Alunos`] = null
-
-    await update(dbRef(database), updates)
-
-    // Remoção explícita de segurança para garantir que todo o nó Alunos seja limpo do Firebase
-    try {
-      await remove(dbRef(database, `classroom_configs/${sala.value.id}/Alunos`))
-    } catch (errRemocao) {
-      console.warn("Nó Alunos já removido:", errRemocao)
-    }
-
-    sala.value.activeParticipantId = selectedActiveParticipant.value
-    sala.value.activeHeadsetId = selectedActiveOculos.value || null
-    sala.value.Alunos = null
-    alunoAlvoSelecionado.value = ''
-
-    tipoMensagem.value = 'success'
-    mensagemAtivos.value = 'Configuração da sessão salva com sucesso!' + mensagemExtra
-  } catch (error) {
-    console.error("Erro ao salvar configurações ativas:", error)
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Erro ao salvar. Tente novamente.'
-  } finally {
-    salvandoAtivos.value = false
-    setTimeout(() => { mensagemAtivos.value = '' }, 5000)
   }
 }
 
 // Exclusão da Sala
 const confirmarExclusaoSala = () => {
-  if (!podeModificarEControlar.value) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Sua instituição possui acesso de visualização. É necessário ter FacilitadorPlus para excluir salas.'
-    return
-  }
-
   if (isSalaAtiva(sala.value)) {
-    tipoMensagem.value = 'error'
-    mensagemAtivos.value = 'Esta sala está com status "Ativa". Não é possível excluí-la.'
+    mensagemPermissao.value = "Esta sala está com status \"Ativa\" no momento e não pode ser excluída."
     return
   }
-
-  const idsAutorizados = [
-    userData.value.id,
-    userData.value.uid,
-    userData.value.authUid,
-    userData.value.idCurto
-  ].filter(Boolean)
-
-  if (sala.value.facilitadorId && !idsAutorizados.includes(sala.value.facilitadorId)) {
-    mensagemPermissao.value = "Você só tem permissão para excluir as salas que você mesmo criou."
-  } else {
-    mensagemPermissao.value = ''
-  }
-
   modalExclusaoAberto.value = true
 }
 
 const executarExclusaoSala = async () => {
-  if (!sala.value?.id) return
-
   if (!podeModificarEControlar.value) {
-    mensagemPermissao.value = "Sua instituição possui acesso de visualização. É necessário ter FacilitadorPlus para excluir salas."
+    mensagemPermissao.value = "Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para excluir salas."
     return
   }
 
@@ -2710,4250 +1598,1322 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Layout e Container Principal */
-.sala-view-container {
-  width: 100%;
+/* ==========================================
+   CONSOLE VIEWPORT LOCK (SEM SCROLL GERAL)
+   ========================================== */
+.console-viewport-lock {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 24px;
 }
 
-/* Barra Superior com Breadcrumb e Botão Voltar */
-.top-nav-bar-glass {
+/* Espaço de segurança para tradutor no canto superior direito */
+.safe-translate-space {
+  padding-right: 140px;
+}
+
+/* ==========================================
+   CONSOLE MAIN CONTENT & TOOLBAR
+   ========================================== */
+.console-main-content {
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 68px);
+  padding: 12px 24px 16px 95px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+}
+
+.console-wrapper {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ==========================================
+   BARRA SUPERIOR DE SESSÃO DIDASCALIAS
+   ========================================== */
+.console-session-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 16px;
-  padding: 12px 20px;
+  padding: 8px 18px;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  flex-shrink: 0;
+  gap: 14px;
 }
 
-.btn-back-nav {
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-back-nav-compact {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 9px 16px;
+  border-radius: 10px;
+  padding: 6px 12px;
   color: #334155;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
-.btn-back-nav:hover {
+.btn-back-nav-compact:hover {
   background: #eff6ff;
   border-color: #93c5fd;
   color: #0071e3;
-  transform: translateX(-3px);
+  transform: translateX(-2px);
 }
 
-.back-arrow-svg {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
+.back-svg-mini {
+  width: 14px;
+  height: 14px;
 }
 
-.breadcrumbs-trail {
+.toolbar-room-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.bc-item {
-  color: #64748b;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.bc-item:hover:not(.current) {
-  color: #0071e3;
-}
-
-.bc-item.current {
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.bc-sep {
-  color: #cbd5e1;
-}
-
-/* Navbar Right Status Pill */
-.session-live-pulse-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-}
-
-.badge-sala-ativa {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1.5px solid #a7f3d0;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
-}
-
-.badge-sala-inativa {
-  background: #f1f5f9;
-  color: #64748b;
-  border: 1.5px solid #cbd5e1;
-}
-
-.pulse-beacon {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
-  animation: beaconPulse 2s infinite;
-}
-
-.idle-beacon {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #94a3b8;
-}
-
-@keyframes beaconPulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-/* Room Hero Glass */
-.room-hero-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
-  border-radius: 24px;
-  padding: 28px 32px;
-  box-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.room-hero-content {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.room-avatar-hud {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 24px rgba(0, 113, 227, 0.3);
-  flex-shrink: 0;
-}
-
-.avatar-vr-emoji {
-  font-size: 2.2rem;
-}
-
-.room-hero-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.hero-top-tags {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.kicker-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #0071e3;
-  letter-spacing: 0.8px;
-}
-
-.target-type-badge {
-  font-size: 0.76rem;
-  font-weight: 700;
-  background: #f1f5f9;
-  color: #475569;
-  padding: 3px 10px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.status-live-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 8px;
-}
-
-.status-live-tag.is-active {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
-}
-
-.status-live-tag.is-idle {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.room-hero-title {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.6px;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.room-hero-desc {
-  font-size: 0.95rem;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.45;
-  max-width: 800px;
-}
-
-/* Quick Telemetry Grid */
-.telemetry-bar-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-.telem-item-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(248, 250, 252, 0.9);
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 12px 16px;
-  transition: all 0.2s ease;
-}
-
-.telem-item-card:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-}
-
-.telem-icon {
-  width: 36px;
-  height: 36px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 5px 12px;
   border-radius: 10px;
-  background: #eff6ff;
-  color: #0071e3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.telem-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.telem-data {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.telem-label {
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: #64748b;
-  letter-spacing: 0.4px;
-}
-
-.telem-value {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #0f172a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.telem-value.text-green {
-  color: #059669;
-}
-
-/* Alerta de Sala Ativa */
-.sala-ativa-lock-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  background: #fffbeb;
-  border: 1.5px solid #fde68a;
-  border-radius: 18px;
-  padding: 16px 20px;
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.12);
-  animation: fadeIn 0.3s ease;
-}
-
-.lock-alert-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-
-.lock-alert-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  color: #92400e;
-}
-
-.lock-alert-text strong {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.lock-alert-text p {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  color: #b45309;
-}
-
-/* Badges de Acesso Institucional no Topo */
-.role-access-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 8px;
-}
-
-.role-access-badge.access-plus {
-  background: linear-gradient(135deg, #ecfdf5 0%, #f3e8ff 100%);
-  color: #7c3aed;
-  border: 1px solid #d8b4fe;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.12);
-}
-
-.role-access-badge.access-readonly {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-
-/* Alerta Institucional de Modo Somente Leitura */
-.instituicao-readonly-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  background: #eff6ff;
-  border: 1.5px solid #bfdbfe;
-  border-radius: 18px;
-  padding: 16px 20px;
-  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);
-  animation: fadeIn 0.3s ease;
-}
-
-.readonly-alert-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-
-.readonly-alert-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: #1e40af;
-}
-
-.readonly-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.readonly-title-wrap strong {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #1e3a8a;
-}
-
-.readonly-tag-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #93c5fd;
-  border-radius: 6px;
-  padding: 2px 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.readonly-alert-text p {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  color: #1e40af;
-}
-
-.readonly-inline-hint {
-  margin: 8px 0 0 0;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 6px 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Banner de Visualização Dentro do Menu 3 */
-.vr-readonly-mode-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 14px;
-  padding: 14px 18px;
-  margin-bottom: 20px;
-}
-
-.vr-readonly-banner-icon {
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-
-.vr-readonly-banner-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.vr-readonly-banner-text strong {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.vr-readonly-banner-text p {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #64748b;
-  line-height: 1.4;
-}
-
-.card-disabled {
-  opacity: 0.55 !important;
-  cursor: not-allowed !important;
-  pointer-events: none !important;
-  filter: grayscale(40%);
-}
-
-.btn-disabled {
-  opacity: 0.55 !important;
-  cursor: not-allowed !important;
-  pointer-events: none !important;
-}
-
-/* Canvas Grid de Configuração (2 Colunas Amplas) */
-.room-canvas-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-  position: relative;
-  z-index: 50;
-}
-
-.room-canvas-grid.has-dropdown-open {
-  z-index: 9999 !important;
-}
-
-@media (max-width: 960px) {
-  .room-canvas-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.canvas-card-module {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
-  border-radius: 22px;
-  padding: 24px 28px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  transition: all 0.25s ease;
-  position: relative;
-  z-index: 10;
-}
-
-.canvas-card-module.has-dropdown-open,
-.canvas-card-module:has(.custom-oculos-dropdown-container.is-open) {
-  z-index: 10000 !important;
-}
-
-.canvas-card-module.is-collapsed {
-  gap: 0;
-}
-
-.canvas-card-module.module-locked {
-  background: rgba(248, 250, 252, 0.85);
-  border-color: #e2e8f0;
-}
-
-.module-header-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-/* Accordion & Cabeçalhos Clicáveis */
-.clickable-accordion-header {
-  cursor: pointer;
-  user-select: none;
-  transition: opacity 0.2s ease;
-}
-
-.clickable-accordion-header:hover {
-  opacity: 0.92;
-}
-
-.header-locked-disabled {
-  cursor: not-allowed !important;
-  user-select: none;
-  opacity: 0.72;
-}
-
-.header-locked-disabled * {
-  cursor: not-allowed !important;
-}
-
-.accordion-chevron-box {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s, color 0.2s;
-}
-
-.clickable-accordion-header:hover .accordion-chevron-box {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-.accordion-chevron-box.is-flipped {
-  transform: rotate(180deg);
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #0071e3;
-}
-
-.accordion-lock-box {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #fee2e2;
-  border: 1.5px solid #fca5a5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
-}
-
-.header-right-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.module-collapsed-summary {
-  margin-top: 6px;
-}
-
-.summary-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 600;
-  background: #f8fafc;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  padding: 3px 10px;
-  border-radius: 8px;
-}
-
-.summary-chip.purple {
-  background: #f5f3ff;
-  border-color: #ddd6fe;
-  color: #6d28d9;
-}
-
-.summary-chip.locked {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
-}
-
-/* Transição do Acordeão */
-.accordion-slide-enter-active,
-.accordion-slide-leave-active {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-}
-
-.accordion-slide-enter-from,
-.accordion-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.module-number-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
-}
-
-.module-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-}
-
-.module-title-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.module-title {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.module-desc {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #64748b;
-  line-height: 1.35;
-}
-
-.hardware-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  padding: 4px 11px;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
-
-.hardware-status-badge.connected {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
-}
-
-.hardware-status-badge.pending {
-  background: #fffbeb;
-  color: #d97706;
-  border: 1px solid #fde68a;
-}
-
-.pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;
-  animation: beaconPulse 2s infinite;
-}
-
-.idle-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #f59e0b;
-}
-
-.count-tech-badge {
-  font-size: 0.74rem;
-  font-weight: 700;
-  background: #eff6ff;
-  color: #0071e3;
-  border: 1px solid #bfdbfe;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
-
-/* Custom Óculos Dropdown */
-.custom-oculos-dropdown-container {
-  position: relative;
-  width: 100%;
-  z-index: 100;
-}
-
-.custom-oculos-dropdown-container.is-open {
-  z-index: 50000 !important;
-}
-
-.custom-oculos-trigger {
-  width: 100%;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 16px;
-  padding: 12px 18px;
-  cursor: pointer;
-  box-sizing: border-box;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  text-align: left;
-  user-select: none;
-}
-
-.custom-oculos-trigger:hover:not(.is-disabled) {
-  border-color: #0071e3;
-  background: #f8fafc;
-  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.08);
-}
-
-.custom-oculos-dropdown-container.is-open .custom-oculos-trigger {
-  border-color: #0071e3;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.14);
-}
-
-.custom-oculos-trigger.is-disabled {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-.trigger-left {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 14px !important;
-  min-width: 0;
-  flex: 1;
-}
-
-.headset-icon-box {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  max-width: 40px !important;
-  border-radius: 12px;
-  background: rgba(0, 113, 227, 0.08);
-  border: 1px solid rgba(0, 113, 227, 0.15);
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: #0071e3;
-  font-size: 1.3rem;
-  flex-shrink: 0 !important;
-  overflow: hidden !important;
-  transition: all 0.2s ease;
-}
-
-.headset-icon-box.has-selection {
-  background: linear-gradient(135deg, rgba(0, 113, 227, 0.15), rgba(16, 185, 129, 0.15));
-  border-color: #93c5fd;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.12);
-}
-
-.vr-headset-svg {
-  width: 20px !important;
-  height: 20px !important;
-  min-width: 20px !important;
-  max-width: 20px !important;
-  flex-shrink: 0 !important;
-  display: block !important;
-}
-
-.trigger-label-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.selected-oculos-title {
-  font-size: 0.96rem;
-  font-weight: 700;
-  color: #0f172a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.selected-oculos-sub {
-  font-size: 0.78rem;
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.placeholder-oculos-title {
-  font-size: 0.94rem;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.placeholder-oculos-sub {
-  font-size: 0.78rem;
-  color: #94a3b8;
-}
-
-.trigger-chevron {
-  width: 22px !important;
-  height: 22px !important;
-  min-width: 22px !important;
-  max-width: 22px !important;
-  color: #64748b;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  flex-shrink: 0 !important;
-}
-
-.trigger-chevron svg {
-  width: 18px !important;
-  height: 18px !important;
-  min-width: 18px !important;
-  max-width: 18px !important;
-  flex-shrink: 0 !important;
-  display: block !important;
-}
-
-.trigger-chevron.is-flipped {
-  transform: rotate(180deg);
-  color: #0071e3;
-}
-
-/* Dropdown Menu Glass */
-.custom-oculos-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  z-index: 999999 !important;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1.5px solid rgba(0, 113, 227, 0.25);
-  border-radius: 18px;
-  padding: 12px;
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2), 0 8px 24px rgba(0, 113, 227, 0.12);
-}
-
-.menu-header-hint {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px 8px 10px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #94a3b8;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #f1f5f9;
-  margin-bottom: 8px;
-}
-
-.count-badge-sub {
-  background: #f1f5f9;
-  color: #64748b;
-  padding: 2px 7px;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.menu-items-scroll {
-  max-height: 280px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-right: 4px;
-}
-
-.menu-items-scroll::-webkit-scrollbar {
-  width: 5px;
-}
-
-.menu-items-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-
-/* Oculos Menu Item */
-.oculos-menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: transparent;
-  border: 1px solid transparent;
-  gap: 12px;
-}
-
-.oculos-menu-item:hover:not(.is-blocked) {
-  background: rgba(0, 113, 227, 0.05);
-  border-color: rgba(0, 113, 227, 0.15);
-  transform: translateX(2px);
-}
-
-.oculos-menu-item.is-active {
-  background: rgba(0, 113, 227, 0.08);
-  border-color: #93c5fd;
-}
-
-.oculos-menu-item.is-blocked {
-  opacity: 0.55;
-  cursor: not-allowed;
-  background: #f8fafc;
-}
-
-.item-icon-box {
-  border-radius: 10px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  font-size: 1.25rem;
-}
-
-.item-icon-box.vr-icon.is-active {
-  background: linear-gradient(135deg, #0071e3, #3b82f6);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
-}
-
-.item-icon-box.none-icon {
-  color: #94a3b8;
-}
-
-.item-text-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex-grow: 1;
-  min-width: 0;
-}
-
-.item-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.item-title {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.badge-numero-oculos {
-  font-size: 0.74rem;
-  font-weight: 600;
-  background: #f1f5f9;
-  color: #475569;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-}
-
-.item-desc {
-  font-size: 0.76rem;
-  color: #94a3b8;
-}
-
-.item-status-warning {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: #dc2626;
-}
-
-.item-status-active {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: #059669;
-}
-
-.item-status-avail {
-  font-size: 0.74rem;
-  color: #64748b;
-}
-
-.item-check {
-  color: #0071e3;
-  font-weight: 800;
-  font-size: 1rem;
-}
-
-.item-action-indicator {
-  flex-shrink: 0;
-}
-
-.badge-selected-pill {
-  font-size: 0.72rem;
-  font-weight: 700;
-  background: #0071e3;
-  color: #ffffff;
-  padding: 3px 9px;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
-}
-
-.badge-locked-pill {
-  font-size: 0.72rem;
-  font-weight: 700;
-  background: #fee2e2;
-  color: #dc2626;
-  padding: 3px 9px;
-  border-radius: 6px;
-}
-
-.action-arrow-sub {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #0071e3;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: all 0.2s ease;
-}
-
-.oculos-menu-item:hover:not(.is-blocked) .action-arrow-sub {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.empty-dropdown-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  color: #64748b;
-  font-size: 0.84rem;
-  justify-content: center;
-}
-
-/* Active Headset Preview */
-.active-headset-preview {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(135deg, rgba(0, 113, 227, 0.06) 0%, rgba(2, 132, 199, 0.04) 100%);
-  border: 1.5px solid rgba(0, 113, 227, 0.25);
-  border-radius: 14px;
-  padding: 12px 16px;
-  overflow: hidden;
-}
-
-.preview-glow-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(180deg, #0071e3, #38bdf8);
-}
-
-.hw-icon {
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-
-.preview-meta-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.preview-model {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #0071e3;
-}
-
-.preview-sub {
-  font-size: 0.76rem;
-  color: #475569;
-  font-weight: 500;
-}
-
-.preview-state-tag {
-  flex-shrink: 0;
-}
-
-.tag-signal {
-  font-size: 0.65rem;
-  font-weight: 800;
-  background: #059669;
-  color: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
-}
-
-.empty-warn-tech {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  color: #d97706;
-  margin: 2px 0 0 0;
-  font-weight: 500;
-}
-
-.warn-svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-/* Digital Student Pass */
-.digital-student-pass {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-  border: 1.5px solid #bfdbfe;
-  border-radius: 16px;
-  padding: 16px 20px;
-  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.08);
-  overflow: hidden;
-}
-
-.pass-accent-light {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 5px;
-  background: linear-gradient(180deg, #0071e3, #60a5fa);
-}
-
-.pass-avatar-box {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 1.15rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.28);
-  border: 2px solid #ffffff;
-}
-
-.pass-details-box {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-
-.pass-identity-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pass-role-micro {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: #0071e3;
-  letter-spacing: 0.6px;
-}
-
-.pass-chip-verified {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: #ecfdf5;
-  color: #059669;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: 1px solid #a7f3d0;
-}
-
-.pass-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.pass-email {
-  font-size: 0.82rem;
-  color: #64748b;
-}
-
-/* Grupo Selection Zone */
-.group-selection-zone {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.tech-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #f8fafc;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 10px 14px;
-  transition: all 0.2s ease;
-}
-
-.tech-search-bar:focus-within {
-  background: #ffffff;
-  border-color: #0071e3;
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
-}
-
-.search-svg {
-  width: 17px;
-  height: 17px;
-  color: #64748b;
-  flex-shrink: 0;
-}
-
-.tech-search-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 0.88rem;
-  color: #0f172a;
-}
-
-.clear-search-btn {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 2px 6px;
-  background: none;
-  border: none;
-}
-
-.clear-search-btn:hover {
-  color: #ef4444;
-}
-
-.student-cards-scrollable {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 280px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.student-cards-scrollable::-webkit-scrollbar {
-  width: 5px;
-}
-
-.student-cards-scrollable::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
-}
-
-.student-hud-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 12px 16px;
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.student-hud-card:hover:not(.is-disabled) {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  transform: translateX(3px);
-}
-
-.student-hud-card.selected-active {
-  background: #eff6ff;
-  border-color: #0071e3;
-  box-shadow: 0 4px 16px rgba(0, 113, 227, 0.14);
-  transform: translateX(3px);
-}
-
-.student-hud-card.is-disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.st-card-profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  flex: 1;
-}
-
-.st-hud-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #0071e3 0%, #10b981 100%);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.student-hud-card.selected-active .st-hud-avatar {
-  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35);
-}
-
-.st-hud-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.st-hud-name {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.st-hud-email {
-  font-size: 0.78rem;
-  color: #64748b;
-}
-
-.st-hud-action {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.inactive-radio-circle {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #cbd5e1;
-  border-radius: 50%;
-  display: block;
-}
-
-.check-mark-tech {
-  font-size: 0.74rem;
-  font-weight: 800;
-  background: #0071e3;
-  color: #ffffff;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
-}
-
-.empty-search-alert {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 30px;
-  color: #94a3b8;
-  font-size: 0.85rem;
-  text-align: center;
-}
-
-.empty-search-svg {
-  width: 28px;
-  height: 28px;
-  stroke: #cbd5e1;
-}
-
-/* Feedback Box */
-.feedback-toast-box {
-  margin-top: 4px;
-}
-
-.feedback-toast-card {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
-  border-radius: 14px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  text-align: center;
-}
-
-.feedback-toast-card.success {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
-}
-
-.feedback-toast-card.error {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
-}
-
-/* Actions Zone */
-.actions-zone-glass {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-.btn-confirm-session-tech {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 360px;
-  padding: 15px 28px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #0071e3 0%, #0056b3 100%);
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 10px 28px -4px rgba(0, 113, 227, 0.42);
-  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-confirm-session-tech:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 14px 34px -4px rgba(0, 113, 227, 0.52);
-}
-
-.btn-confirm-session-tech:disabled {
-  background: #94a3b8;
-  color: #ffffff !important;
-  box-shadow: none;
-  cursor: not-allowed;
-  opacity: 0.8;
-}
-
-.btn-confirm-session-tech .btn-confirm-text {
-  color: #ffffff !important;
-  font-size: 0.98rem;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-}
-
-.btn-confirm-session-tech .btn-action-svg {
-  width: 20px;
-  height: 20px;
-  stroke: #ffffff !important;
-  color: #ffffff !important;
-  flex-shrink: 0;
-}
-
-.btn-spinner-tech {
-  width: 20px;
-  height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-/* Zona de Perigo */
-.danger-zone-box {
-  padding: 20px 24px;
-  background: #fff5f5;
-  border: 1.5px dashed #fca5a5;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.danger-zone-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: left;
-  flex: 1;
-  min-width: 240px;
-}
-
-.danger-zone-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #b91c1c;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.danger-zone-desc {
-  font-size: 0.82rem;
-  color: #7f1d1d;
-  line-height: 1.35;
-}
-
-.btn-delete-room-full {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
-}
-
-.btn-delete-room-full:hover:not(:disabled) {
-  background: #b91c1c;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.35);
-}
-
-.btn-delete-room-full:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-delete-room-full svg {
-  width: 16px;
-  height: 16px;
-}
-
-.btn-back-link {
-  background: #0071e3;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  margin-top: 12px;
-}
-
-/* Modal de Exclusão */
-.delete-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200000 !important;
-  padding: 20px;
-}
-
-.delete-modal-box {
-  background: #ffffff;
-  border-radius: 22px;
-  max-width: 440px;
-  width: 100%;
-  padding: 28px 24px 24px 24px;
-  box-shadow: 0 25px 60px -15px rgba(220, 38, 38, 0.25), 0 0 0 1px rgba(239, 68, 68, 0.15);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 14px;
-  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.delete-icon-circle {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: #fee2e2;
-  border: 2px solid #fca5a5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #dc2626;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
-}
-
-.delete-warn-svg {
-  width: 28px;
-  height: 28px;
-}
-
-.delete-modal-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.4px;
-}
-
-.delete-modal-subdesc {
-  margin: 0;
-  font-size: 0.88rem;
-  color: #64748b;
-  line-height: 1.4;
-}
-
-.delete-modal-room-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #fef2f2;
-  border: 1.5px solid #fecaca;
-  padding: 8px 16px;
-  border-radius: 12px;
-  max-width: 100%;
 }
 
 .room-badge-icon {
   font-size: 1.1rem;
-  flex-shrink: 0;
 }
 
-.room-name-text {
-  font-size: 0.95rem;
+.room-badge-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.toolbar-center-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-didas-session {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.btn-didas-session:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.btn-didas-session:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-didas-session:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(30%);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-start {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.btn-end {
+  background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.28);
+}
+
+.btn-reset-all {
+  background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+  box-shadow: 0 4px 14px rgba(71, 85, 105, 0.25);
+}
+
+.btn-action-icon {
+  font-size: 0.85rem;
+}
+
+.toolbar-right-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-didas-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
   font-weight: 700;
-  color: #b91c1c;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
 }
 
-.delete-modal-points {
+.btn-didas-tool:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #0071e3;
+  transform: translateY(-1px);
+}
+
+.tool-count-pill {
+  background: #0071e3;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+/* ==========================================
+   PAINEL SPLIT SCREEN (ESTILO DIDASCALIAS)
+   ========================================== */
+.console-split-layout {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 16px 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+/* ==========================================
+   COLUNA DA ESQUERDA: ALUNOS, CENÁRIOS, SONS
+   ========================================== */
+.console-left-column {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* SEÇÃO 1: ALUNOS */
+.students-section {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 14px 16px;
-  text-align: left;
-  width: 100%;
 }
 
-.delete-point-row {
+.section-title-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  font-size: 0.82rem;
-  color: #475569;
-  line-height: 1.4;
 }
 
-.bullet-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #94a3b8;
-  flex-shrink: 0;
-  margin-top: 6px;
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
 }
 
-.bullet-dot.red {
-  background: #ef4444;
-}
-
-.delete-point-row.alert {
-  color: #b91c1c;
-  font-weight: 600;
-}
-
-.delete-error-note {
-  margin: 0;
-  font-size: 0.84rem;
-  color: #dc2626;
-  font-weight: 600;
-}
-
-.delete-modal-actions {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  margin-top: 4px;
-}
-
-.btn-cancel-delete {
-  flex: 1;
-  padding: 12px 18px;
-  border-radius: 12px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+.section-badge-counter {
+  font-size: 0.78rem;
   font-weight: 700;
-  font-size: 0.92rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 8px;
 }
 
-.btn-cancel-delete:hover:not(:disabled) {
+.hint-sala-inativa-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #d97706;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+.students-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 6px 2px;
+  scrollbar-width: thin;
+}
+
+.student-glass-card {
+  border: 1.5px solid #bae6fd;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 9px 18px;
+  min-width: 110px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+}
+
+.student-glass-card:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.16);
+}
+
+/* Aluno Selecionado (Ciano Luminoso Apple Glass) */
+.student-glass-card.is-selected {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #0284c7;
+  color: #0369a1;
+  font-weight: 800;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.3);
+}
+
+.student-cond-chip {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.student-cond-chip.chip-tea {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.student-cond-chip.chip-tdah {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.no-students-banner {
+  font-size: 0.84rem;
+  color: #b45309;
+  padding: 6px 12px;
+  background: #fef3c7;
+  border-radius: 8px;
+}
+
+/* DIVISÓRIA SUTIL DIDASCALIAS */
+.didas-subtle-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+
+/* SEÇÃO 2: CENÁRIOS */
+.scenarios-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.scenarios-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.scenarios-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.scenarios-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.scenarios-subtitle {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.scenarios-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-pill-btn:hover {
   background: #e2e8f0;
   color: #0f172a;
 }
 
-.btn-confirm-delete {
-  flex: 1.3;
-  padding: 12px 18px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.92rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-confirm-delete:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
-}
-
-.btn-confirm-delete:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.trash-action-svg {
-  width: 16px;
-  height: 16px;
-}
-
-.btn-spinner-delete {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-/* ===================================================
-   MÓDULO 03: CENTRO DE INTERAÇÃO & COMANDOS VR
-   =================================================== */
-.vr-interaction-module-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1.5px solid rgba(255, 255, 255, 0.9);
-  border-radius: 24px;
-  padding: 32px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.vr-interaction-module-glass.is-active-session {
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 16px 48px rgba(16, 185, 129, 0.08), 0 4px 20px rgba(0, 113, 227, 0.06);
-}
-
-.vr-interaction-module-glass.is-locked-session {
-  border-color: rgba(226, 232, 240, 0.8);
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.accent-purple {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35) !important;
-}
-
-.live-active-pulse {
-  background: rgba(16, 185, 129, 0.12) !important;
-  border-color: rgba(16, 185, 129, 0.35) !important;
-  color: #059669 !important;
-  font-weight: 700 !important;
-}
-
-.pulse-beacon-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  animation: pulseBeaconDot 1.8s infinite;
-}
-
-@keyframes pulseBeaconDot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-.locked-badge {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-  color: #64748b !important;
-}
-
-.lock-icon-mini {
-  font-size: 0.85rem;
-}
-
-.vr-students-count-chip {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  padding: 6px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-}
-
-.count-main-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.vr-students-count-chip .count-num {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #6366f1;
-}
-
-.vr-students-count-chip .count-lbl {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.count-cond-pills {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.cond-pill-mini {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
-  line-height: 1.2;
-}
-
-.cond-pill-mini.cond-tea {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-}
-
-.cond-pill-mini.cond-tdah {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #b45309;
-}
-
-.vr-interact-locked-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
-  border-left: 5px solid #f59e0b;
-  border-radius: 14px;
-  padding: 16px 20px;
-  color: #92400e;
-}
-
-.locked-banner-icon {
-  font-size: 1.8rem;
-  flex-shrink: 0;
-}
-
-.locked-banner-content strong {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 700;
-  margin-bottom: 3px;
-  color: #78350f;
-}
-
-.locked-banner-content p {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: #92400e;
-}
-
-.vr-interact-body {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  transition: opacity 0.25s ease;
-}
-
-.vr-interact-body.controls-disabled {
-  opacity: 0.55;
-  pointer-events: none;
-  filter: grayscale(0.2);
-  user-select: none;
-}
-
-.interact-step-box {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 22px 24px;
-}
-
-.step-subhead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.step-subhead-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.subhead-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #6366f1;
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 3px 9px;
-  border-radius: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.subhead-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.selected-target-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 14px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 9999px;
-  color: #1d4ed8;
-  font-size: 0.84rem;
-}
-
-.selected-target-pill strong {
-  font-weight: 800;
-  color: #0071e3;
-}
-
-.pill-cond-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.pill-cond-badge.cond-tea {
-  background: #2563eb;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
-}
-
-.pill-cond-badge.cond-tdah {
-  background: #d97706;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.35);
-}
-
-.pending-target-pill {
-  font-size: 0.82rem;
-  color: #94a3b8;
-  font-style: italic;
-}
-
-/* Barra de Filtros e Busca dos Alunos Virtuais */
-.vr-students-filter-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-}
-
-.vr-condition-tabs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.cond-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #475569;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.cond-tab-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #1e293b;
-  transform: translateY(-1px);
-}
-
-.cond-tab-btn.active {
-  background: #1e293b;
-  border-color: #1e293b;
-  color: #ffffff;
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2);
-}
-
-.cond-tab-btn.tab-tea.active {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-  border-color: #1d4ed8;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-}
-
-.cond-tab-btn.tab-tdah.active {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-  border-color: #d97706;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
-}
-
-.cond-tab-btn.tab-tipico.active {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  border-color: #059669;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
-}
-
-.cond-tab-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  background: rgba(0, 0, 0, 0.06);
-  color: inherit;
-}
-
-.cond-tab-btn.active .cond-tab-count {
-  background: rgba(255, 255, 255, 0.25);
+.filter-pill-btn.is-active {
+  background: #0071e3;
+  border-color: #0071e3;
   color: #ffffff;
 }
 
-.vr-students-search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 6px 10px;
-  min-width: 220px;
-  transition: all 0.2s;
-}
-
-.vr-students-search-box:focus-within {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.mini-search-svg {
-  width: 15px;
-  height: 15px;
-  color: #94a3b8;
-  flex-shrink: 0;
-}
-
-.mini-search-input {
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 0.8rem;
-  color: #1e293b;
-  width: 100%;
-}
-
-.mini-clear-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  font-size: 1.1rem;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-}
-
-.mini-clear-btn:hover {
-  color: #ef4444;
-}
-
-/* Chips de Alunos 3D */
-.vr-target-students-grid {
+/* GRADE DE CENÁRIOS (ESTILO DIDASCALIAS: DISPARO DIRETO NO CLIQUE) */
+.scenarios-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
-  gap: 12px;
-}
-
-.vr-student-target-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 10px 14px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-}
-
-/* 1. Aluno Típico (Simples, limpo e neutro como era antes) */
-.vr-student-target-btn.is-typical-target {
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-}
-
-.vr-student-target-btn.is-typical-target:not(.is-selected):hover:not(:disabled) {
-  border-color: #6366f1;
-  background: #fbfbfe;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.12);
-}
-
-.vr-student-target-btn.is-typical-target.is-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-  border-color: #4f46e5;
-  color: #ffffff;
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
-  transform: translateY(-2px);
-}
-
-.vr-student-target-btn.is-typical-target.is-selected:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
-  border-color: #3730a3;
-  color: #ffffff;
-  box-shadow: 0 8px 26px rgba(79, 70, 229, 0.5);
-  transform: translateY(-3px);
-}
-
-/* 2. Aluno com TEA (Destaque Visual Máximo em Azul Royal com Tarja Lateral) */
-.vr-student-target-btn.is-tea-target {
-  border: 1.5px solid #93c5fd;
-  border-left: 5px solid #2563eb;
-  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.16);
-}
-
-.vr-student-target-btn.is-tea-target:not(.is-selected):hover:not(:disabled) {
-  border-color: #3b82f6;
-  border-left-color: #1d4ed8;
-  background: #eff6ff;
-  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
-  transform: translateY(-3px);
-}
-
-.vr-student-target-btn.is-tea-target.is-selected {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-  border-color: #1e40af;
-  border-left: 5px solid #60a5fa;
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.45);
-  transform: translateY(-3px);
-}
-
-.vr-student-target-btn.is-tea-target.is-selected:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
-  border-color: #172554;
-  border-left: 5px solid #93c5fd;
-  color: #ffffff;
-  box-shadow: 0 10px 28px rgba(29, 78, 216, 0.6);
-  transform: translateY(-3px);
-}
-
-/* 3. Aluno com TDAH (Destaque Visual Máximo em Âmbar/Laranja com Tarja Lateral) */
-.vr-student-target-btn.is-tdah-target {
-  border: 1.5px solid #fcd34d;
-  border-left: 5px solid #f59e0b;
-  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
-}
-
-.vr-student-target-btn.is-tdah-target:not(.is-selected):hover:not(:disabled) {
-  border-color: #f59e0b;
-  border-left-color: #d97706;
-  background: #fef3c7;
-  box-shadow: 0 8px 22px rgba(217, 119, 6, 0.28);
-  transform: translateY(-3px);
-}
-
-.vr-student-target-btn.is-tdah-target.is-selected {
-  background: linear-gradient(135deg, #d97706 0%, #ea580c 100%);
-  border-color: #b45309;
-  border-left: 5px solid #fde68a;
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.45);
-  transform: translateY(-3px);
-}
-
-.vr-student-target-btn.is-tdah-target.is-selected:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b45309 0%, #c2410c 100%);
-  border-color: #78350f;
-  border-left: 5px solid #fef08a;
-  color: #ffffff;
-  box-shadow: 0 10px 28px rgba(217, 119, 6, 0.6);
-  transform: translateY(-3px);
-}
-
-/* Avatar dos Alunos */
-.target-avatar-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.target-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #e0e7ff;
-  color: #4338ca;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-}
-
-.is-tea-target .target-avatar {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 2px solid #bfdbfe;
-}
-
-.is-tdah-target .target-avatar {
-  background: #fef3c7;
-  color: #b45309;
-  border: 2px solid #fde68a;
-}
-
-.vr-student-target-btn.is-selected .target-avatar,
-.vr-student-target-btn.is-selected:hover .target-avatar {
-  background: rgba(255, 255, 255, 0.3) !important;
-  color: #ffffff !important;
-  border-color: transparent !important;
-}
-
-.avatar-cond-dot {
-  position: absolute;
-  bottom: -3px;
-  right: -3px;
-  font-size: 0.76rem;
-  line-height: 1;
-  background: #ffffff;
-  border-radius: 50%;
-  padding: 2px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.dot-tea {
-  border: 1px solid #bfdbfe;
-}
-
-.dot-tdah {
-  border: 1px solid #fde68a;
-}
-
-.target-name-wrap {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  gap: 3px;
-}
-
-.target-name {
-  font-size: 0.92rem;
-  font-weight: 700;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.is-tea-target:not(.is-selected) .target-name {
-  color: #1e3a8a;
-}
-
-.is-tdah-target:not(.is-selected) .target-name {
-  color: #78350f;
-}
-
-.vr-student-target-btn.is-selected .target-name,
-.vr-student-target-btn.is-selected:hover .target-name {
-  color: #ffffff !important;
-}
-
-.target-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.target-slot-code {
-  font-size: 0.68rem;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.vr-student-target-btn.is-selected .target-slot-code,
-.vr-student-target-btn.is-selected:hover .target-slot-code {
-  color: rgba(255, 255, 255, 0.9) !important;
-}
-
-/* Badges Fortes e Chamativos para TEA e TDAH */
-.student-neuro-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  line-height: 1.2;
-}
-
-.student-neuro-badge.badge-tea {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
-}
-
-.student-neuro-badge.badge-tdah {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.4);
-}
-
-.vr-student-target-btn.is-selected .student-neuro-badge,
-.vr-student-target-btn.is-selected:hover .student-neuro-badge {
-  background: rgba(255, 255, 255, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-}
-
-.target-check-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  background: #10b981;
-  color: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 900;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vr-student-target-btn.is-selected:hover .target-check-badge {
-  transform: scale(1.15);
-  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.6);
-}
-
-.empty-vr-filter-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
-  padding: 24px;
-  background: #f8fafc;
-  border: 1.5px dashed #cbd5e1;
-  border-radius: 14px;
-  text-align: center;
-  grid-column: 1 / -1;
-}
-
-.empty-filter-text {
-  font-size: 0.86rem;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.btn-clear-vr-filter {
-  padding: 6px 14px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  color: #4f46e5;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-clear-vr-filter:hover {
-  background: #4f46e5;
-  color: #ffffff;
-  border-color: #4f46e5;
-}
-
-.summary-val-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.summary-cond-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.summary-cond-pill.cond-tea {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-}
-
-.summary-cond-pill.cond-tdah {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #b45309;
-}
-
-.feed-aluno-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.feed-aluno-name {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.feed-cond-tag {
-  font-size: 0.68rem;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 5px;
-  text-transform: uppercase;
-}
-
-.feed-cond-tag.cond-tea {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-}
-
-.feed-cond-tag.cond-tdah {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #b45309;
-}
-
-.empty-vr-students-warn {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 22px;
-  background: #fffbeb;
-  border: 1.5px dashed #fcd34d;
-  border-radius: 16px;
-  text-align: left;
-}
-
-.empty-warn-icon-box {
-  font-size: 1.6rem;
-  flex-shrink: 0;
-}
-
-.empty-warn-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.empty-warn-title {
-  font-size: 0.96rem;
-  font-weight: 800;
-  color: #92400e;
-}
-
-.empty-warn-desc {
-  margin: 0;
-  font-size: 0.82rem;
-  color: #b45309;
-  line-height: 1.4;
-}
-
-.vr-students-notfound-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 12px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #b45309;
-}
-
-.notfound-target-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 9999px;
-  color: #b45309;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-/* Passo B: Seletor de Conflitos */
-.step-subhead-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.action-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 8px 14px;
-  width: 100%;
-  max-width: 320px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-}
-
-.search-mini-svg {
-  width: 16px;
-  height: 16px;
-  color: #94a3b8;
-  flex-shrink: 0;
-}
-
-.action-search-input {
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 0.88rem;
-  color: #1e293b;
-  width: 100%;
-}
-
-.action-search-input::placeholder {
-  color: #94a3b8;
-}
-
-.action-category-pills {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  margin-bottom: 16px;
+  padding: 2px 4px 6px 2px;
   scrollbar-width: thin;
 }
 
-.cat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.scenario-glass-card {
+  border: 1.5px solid #fecaca;
+  border-radius: 14px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-}
-
-.cat-pill:hover:not(:disabled) {
-  background: #f1f5f9;
-  color: #1e293b;
-}
-
-.cat-pill.active {
-  background: #1e293b;
-  color: #ffffff;
-  border-color: #1e293b;
-}
-
-.cat-count {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-}
-
-.cat-pill.active .cat-count {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-}
-
-/* Grid de Cards de Ações */
-.vr-actions-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.action-choice-card {
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 16px;
-  cursor: pointer;
+  padding: 11px 13px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 10px;
+  min-height: 94px;
+  text-align: left;
+  cursor: pointer;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.05);
   position: relative;
 }
 
-.action-choice-card:hover:not(.card-disabled):not(.is-condition-locked) {
-  border-color: #6366f1;
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
+.scenario-glass-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #f87171;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.16);
+  background: #fffafa;
 }
 
-.action-choice-card.is-selected {
-  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-  border-color: #6366f1;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
-  transform: translateY(-3px);
+.scenario-glass-card:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
-/* Ação Exclusiva TEA Habilitada */
-.action-choice-card.is-exclusive-tea:not(.is-condition-locked) {
-  border-left: 4.5px solid #2563eb;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.1);
+.scenario-glass-card.is-firing {
+  border-color: #10b981;
+  background: #ecfdf5;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
 }
 
-.action-choice-card.is-exclusive-tea:not(.is-condition-locked):hover {
-  border-color: #2563eb;
-  border-left-color: #1d4ed8;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+.scenario-glass-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+  box-shadow: none;
+  transform: none;
+  filter: grayscale(25%);
 }
 
-/* Ação Exclusiva TDAH Habilitada */
-.action-choice-card.is-exclusive-tdah:not(.is-condition-locked) {
-  border-left: 4.5px solid #f59e0b;
-  background: linear-gradient(135deg, #ffffff 0%, #fffdf5 100%);
-  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.1);
-}
-
-.action-choice-card.is-exclusive-tdah:not(.is-condition-locked):hover {
-  border-color: #f59e0b;
-  border-left-color: #d97706;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
-}
-
-/* Card Bloqueado por Condição (Translúcido / Desabilitado para Aluno Típico ou Incompatível) */
-.action-choice-card.is-condition-locked {
-  opacity: 0.38 !important;
-  filter: grayscale(40%);
-  background: #f8fafc !important;
-  border: 1.5px dashed #cbd5e1 !important;
-  cursor: not-allowed !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.action-choice-card.is-condition-locked:hover {
-  opacity: 0.52 !important;
-  border-color: #94a3b8 !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.action-choice-card.is-condition-locked .action-emoji-symbol {
-  filter: grayscale(80%);
-}
-
-.action-card-top {
+.scenario-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  margin-bottom: 2px;
 }
 
-.action-top-badges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.scenario-icon-box {
+  font-size: 1.25rem;
 }
 
-.action-emoji-symbol {
-  font-size: 1.7rem;
-  line-height: 1;
-}
-
-/* Badges Exclusivos TEA e TDAH */
-.action-exclusive-badge {
-  font-size: 0.68rem;
+.scenario-cond-badge {
+  font-size: 0.65rem;
   font-weight: 800;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  line-height: 1.2;
 }
 
-.action-exclusive-badge.badge-tea {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
+.scenario-cond-badge.tea {
+  background: #e0e7ff;
+  color: #4338ca;
 }
 
-.action-choice-card:not(.is-condition-locked) .action-exclusive-badge.badge-tea {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-  border-color: transparent;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.action-exclusive-badge.badge-tdah {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+.scenario-cond-badge.tdah {
+  background: #fef3c7;
   color: #b45309;
 }
 
-.action-choice-card:not(.is-condition-locked) .action-exclusive-badge.badge-tdah {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-  border-color: transparent;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+.scenario-card-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
 }
 
-.action-lock-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #64748b;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.action-selected-tag {
+.scenario-card-desc {
   font-size: 0.72rem;
-  font-weight: 800;
-  background: #6366f1;
-  color: #ffffff;
-  padding: 2px 8px;
-  border-radius: 999px;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
-}
-
-.action-title-text {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.action-desc-text {
-  font-size: 0.78rem;
   color: #64748b;
-  margin: 0;
-  line-height: 1.4;
-  flex-grow: 1;
+  line-height: 1.25;
+  margin: 3px 0 6px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.action-card-footer {
-  margin-top: 4px;
+.scenario-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.instant-trigger-badge {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #e11d48;
+  letter-spacing: 0.3px;
+}
+
+/* SEÇÃO 3: SONS DA SALA (EMBAIXO DOS CENÁRIOS, EXTENSÍVEL) */
+.sounds-section {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sounds-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+}
+
+.sounds-title-wrap {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
-.action-lock-hint {
-  font-size: 0.68rem;
-  color: #94a3b8;
-  font-style: italic;
-  font-weight: 600;
+.sounds-icon-tag {
+  font-size: 1rem;
 }
 
-.action-code-tag {
-  font-family: monospace;
-  font-size: 0.72rem;
-  padding: 3px 7px;
+.sounds-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sounds-tech-badge {
+  font-size: 0.66rem;
+  font-weight: 800;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
   border-radius: 6px;
-  background: #f1f5f9;
-  color: #475569;
-  display: inline-block;
+  border: 1px solid #fde68a;
 }
 
-.action-choice-card.is-selected .action-code-tag {
-  background: rgba(99, 102, 241, 0.15);
-  color: #4338ca;
-  font-weight: 700;
+.sounds-hint-text {
+  font-size: 0.72rem;
+  color: #64748b;
 }
 
-.empty-actions-result {
-  grid-column: 1 / -1;
-  padding: 32px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.9rem;
-}
-
-/* Category Pills para TEA e TDAH */
-.cat-pill.cat-pill-tea.active {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-}
-
-.cat-pill.cat-pill-tdah.active {
-  background: #d97706;
-  border-color: #d97706;
-}
-
-/* Feedback Toast */
-.command-feedback-toast {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  border-radius: 14px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  margin-top: 10px;
-}
-
-.command-feedback-toast.success {
-  background: #ecfdf5;
-  border: 1.5px solid #a7f3d0;
-  color: #065f46;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
-}
-
-.command-feedback-toast.error {
-  background: #fef2f2;
-  border: 1.5px solid #fecaca;
-  color: #991b1b;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
-}
-
-.toast-indicator-icon {
-  font-size: 1.2rem;
-}
-
-/* Barra de Disparo */
-.command-dispatch-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 16px 24px;
-  margin-top: 8px;
-}
-
-.dispatch-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.summary-target-info,
-.summary-action-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.summary-lbl {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #94a3b8;
-  letter-spacing: 0.5px;
-}
-
-.summary-val {
-  font-size: 0.95rem;
-  color: #1e293b;
-}
-
-.summary-sep {
-  font-size: 1.2rem;
-  color: #cbd5e1;
-}
-
-.btn-dispatch-command {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #8b5cf6 100%);
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 0.96rem;
-  border: none;
-  border-radius: 14px;
-  padding: 14px 28px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
-}
-
-.btn-dispatch-command:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.45);
-}
-
-.btn-dispatch-command:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.dispatch-svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* ==========================================
-   BARRA DE REINICIALIZAÇÃO VR (BOTÕES VERMELHOS)
-   ========================================== */
-.command-reset-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: linear-gradient(135deg, #fff5f5 0%, #fef2f2 100%);
-  border: 1.5px solid #fecaca;
-  border-radius: 18px;
-  padding: 16px 22px;
-  margin-top: 10px;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);
-}
-
-.reset-bar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.reset-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reset-header-icon {
-  font-size: 1.15rem;
-  background: #fee2e2;
-  border-radius: 10px;
-  padding: 5px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reset-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.reset-header-title {
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: #991b1b;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-
-.reset-header-desc {
-  font-size: 0.78rem;
-  color: #7f1d1d;
-  opacity: 0.88;
-}
-
-.reset-buttons-grid {
+.sounds-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
 }
 
-/* Botões Vermelhos de Reset */
-.btn-vr-danger {
-  display: inline-flex;
+.sound-glass-card {
+  display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, #dc2626 0%, #ef4444 55%, #e11d48 100%);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fde68a;
   border-radius: 14px;
-  padding: 13px 20px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.28);
-  position: relative;
-  overflow: hidden;
   text-align: left;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.08);
 }
 
-.btn-vr-danger::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
-}
-
-.btn-vr-danger:hover:not(:disabled)::before {
-  left: 100%;
-}
-
-.btn-vr-danger:hover:not(:disabled) {
+.sound-glass-card:hover:not(:disabled) {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 55%, #be123c 100%);
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.42);
+  border-color: #f59e0b;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);
 }
 
-.btn-vr-danger:active:not(:disabled) {
-  transform: translateY(0);
+.sound-glass-card:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
-.btn-vr-danger:disabled {
-  opacity: 0.52;
+.sound-glass-card:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
   filter: grayscale(20%);
 }
 
-.reset-btn-svg {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-}
-
-.btn-reset-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.btn-reset-title {
-  font-size: 0.94rem;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  color: #ffffff;
-  line-height: 1.2;
-}
-
-.btn-reset-subtitle {
-  font-size: 0.76rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.2;
-}
-
-/* Feed de Comandos Recentes */
-.recent-commands-feed {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 16px 20px;
-  margin-top: 10px;
-}
-
-.feed-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.feed-title {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.feed-count-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  background: #f1f5f9;
-  color: #64748b;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.commands-feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.command-feed-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f8fafc;
-  border: 1px solid #edf2f7;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 0.85rem;
-}
-
-.feed-item-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.feed-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-}
-
-.feed-time {
-  font-family: monospace;
-  font-size: 0.78rem;
-  color: #94a3b8;
-}
-
-.feed-aluno {
-  font-weight: 800;
-  color: #1e293b;
-}
-
-.feed-arrow {
-  color: #cbd5e1;
-}
-
-.feed-conflito {
-  font-weight: 600;
-  color: #4f46e5;
-}
-
-.feed-code {
-  font-family: monospace;
-  font-size: 0.72rem;
-  color: #64748b;
-}
-
-.feed-check-tag {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #059669;
-  background: #ecfdf5;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-/* Destaque para comandos de Reset no feed */
-.command-feed-item.is-reset-item {
-  border-left: 3px solid #ef4444;
-  background: #fef2f2;
-}
-
-.feed-status-dot.dot-reset {
-  background: #ef4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
-}
-
-.feed-conflito.conflito-reset {
-  color: #b91c1c;
-  font-weight: 700;
-}
-
-.feed-check-tag.check-reset {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.feed-aluno-pill.all-students-pill {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-}
-
-/* ==========================================
-   CARD DE FALA DO ESTUDANTE / TEXT-TO-SPEECH
-   ========================================== */
-.command-tts-card {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: linear-gradient(135deg, #f0f7ff 0%, #f5f3ff 100%);
-  border: 1.5px solid #c7d2fe;
-  border-radius: 18px;
-  padding: 18px 24px;
-  margin-top: 10px;
-  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.08);
-}
-
-.tts-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.tts-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 260px;
-}
-
-.tts-header-icon {
+.sound-card-icon {
   font-size: 1.35rem;
-  background: #e0e7ff;
-  border-radius: 12px;
-  padding: 8px 10px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 6px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+  border: 1px solid #fde68a;
 }
 
-.tts-header-text {
+.sound-card-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  flex: 1;
 }
 
-.tts-header-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tts-header-title {
+.sound-card-label {
   font-size: 0.88rem;
   font-weight: 800;
-  color: #312e81;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  color: #92400e;
 }
 
-.tts-tech-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: #4f46e5;
-  color: #ffffff;
-  padding: 2px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+.sound-card-desc {
+  font-size: 0.72rem;
+  color: #b45309;
 }
 
-.tts-header-desc {
-  font-size: 0.8rem;
-  color: #4338ca;
-  opacity: 0.9;
-}
-
-.tts-target-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  border: 1px solid #e0e7ff;
-  border-radius: 12px;
-  padding: 6px 12px;
-}
-
-.tts-target-label {
+.sound-fire-pill {
   font-size: 0.68rem;
   font-weight: 800;
-  color: #6366f1;
+  color: #d97706;
+  background: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #fde68a;
+}
+
+/* ==========================================
+   COLUNA DA DIREITA: PAINEL DO ALUNO & TTS
+   ========================================== */
+.console-right-column {
+  border-left: 1.5px solid #e2e8f0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 0;
+}
+
+/* PARTE SUPERIOR */
+.student-meta-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.student-header-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.student-kicker {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0071e3;
   letter-spacing: 0.5px;
 }
 
-.tts-target-pill {
+.student-main-name {
+  font-size: 1.95rem;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+}
+
+.student-cond-row {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.student-cond-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.student-cond-pill.pill-tea {
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.student-cond-pill.pill-tdah {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.student-cond-pill.pill-tipico {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-reset-student-didas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.btn-reset-student-didas:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.btn-reset-student-didas:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* PARTE INFERIOR: TEXT-TO-SPEECH (TTS) */
+.student-tts-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f0f7ff 0%, #f5f3ff 100%);
+  border: 1.5px solid #c7d2fe;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.06);
+}
+
+.tts-header-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.tts-target-name {
-  font-size: 0.88rem;
+.tts-icon {
+  font-size: 1.1rem;
+}
+
+.tts-heading {
+  font-size: 0.82rem;
   font-weight: 800;
-  color: #1e293b;
+  color: #312e81;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.tts-target-warning {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #d97706;
-}
-
-.tts-card-body {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.tts-input-wrapper {
+.tts-textarea-wrapper {
   position: relative;
-  flex: 1;
-  min-width: 280px;
-  display: flex;
-  align-items: center;
-}
-
-.tts-input-prefix {
-  position: absolute;
-  left: 14px;
-  display: flex;
-  align-items: center;
-  color: #6366f1;
-  pointer-events: none;
-}
-
-.tts-input-svg {
-  width: 18px;
-  height: 18px;
-}
-
-.tts-text-input {
   width: 100%;
-  padding: 13px 80px 13px 42px;
-  background: #ffffff;
+}
+
+.tts-glass-textarea {
   border: 1.5px solid #cbd5e1;
-  border-radius: 14px;
-  font-size: 0.92rem;
-  color: #1e293b;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.tts-text-input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  border-radius: 12px;
+  width: 100%;
+  height: 110px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  resize: none;
+  color: #0f172a;
   background: #ffffff;
+  outline: none;
+  font-weight: 500;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-.tts-text-input:disabled {
-  background: #f1f5f9;
+.tts-glass-textarea:focus {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.tts-glass-textarea:disabled {
+  background: #f8fafc;
   color: #94a3b8;
   cursor: not-allowed;
 }
 
-.tts-clear-btn {
+.tts-counter-tag {
   position: absolute;
-  right: 56px;
-  background: transparent;
-  border: none;
-  font-size: 1.25rem;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 0 6px;
-  line-height: 1;
-  transition: color 0.15s;
-}
-
-.tts-clear-btn:hover {
-  color: #ef4444;
-}
-
-.tts-char-counter {
-  position: absolute;
-  right: 12px;
-  font-size: 0.7rem;
+  bottom: 8px;
+  right: 10px;
+  font-size: 0.66rem;
   font-weight: 700;
   color: #94a3b8;
-  background: #f8fafc;
-  padding: 2px 6px;
-  border-radius: 6px;
-  pointer-events: none;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
-.tts-char-counter.is-limit {
-  color: #ef4444;
-  background: #fee2e2;
-}
-
-.btn-tts-send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+.btn-didas-tts-send {
   background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
   color: #ffffff;
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: 0.96rem;
+  letter-spacing: 0.4px;
   border: none;
-  border-radius: 14px;
-  padding: 13px 24px;
+  border-radius: 12px;
+  padding: 13px 18px;
+  width: 100%;
   cursor: pointer;
-  white-space: nowrap;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.32);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.btn-tts-send:hover:not(:disabled) {
+.btn-didas-tts-send:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.44);
   background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #4338ca 100%);
 }
 
-.btn-tts-send:active:not(:disabled) {
+.btn-didas-tts-send:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.btn-tts-send:disabled {
-  opacity: 0.52;
+.btn-didas-tts-send:disabled {
+  opacity: 0.48;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
-  filter: grayscale(15%);
-}
-
-.tts-send-svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.tts-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 4px;
-  border-top: 1px dashed rgba(99, 102, 241, 0.2);
-}
-
-.tts-requirement-hint {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.tts-requirement-hint.req-valid {
-  color: #059669;
-}
-
-.req-icon {
-  font-weight: 800;
-}
-
-.tts-shortcut-hint {
-  font-size: 0.74rem;
-  color: #64748b;
-}
-
-.kbd-badge {
-  display: inline-block;
-  padding: 1px 5px;
-  font-size: 0.68rem;
-  font-family: inherit;
-  font-weight: 700;
-  color: #334155;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-}
-
-/* Feed TTS Items */
-.command-feed-item.is-tts-item {
-  border-left: 3px solid #0284c7;
-  background: #f0f9ff;
-}
-
-.feed-status-dot.dot-tts {
-  background: #0284c7;
-  box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
-}
-
-.feed-conflito.conflito-tts {
-  color: #0369a1;
-  font-weight: 700;
-}
-
-.feed-check-tag.check-tts {
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
-}
-
-.feed-tts-bubble {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: #ffffff;
-  border: 1px solid #bae6fd;
-  border-radius: 8px;
-  padding: 2px 8px;
-  font-size: 0.8rem;
-  color: #0f172a;
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.feed-tts-bubble-icon {
-  font-size: 0.85rem;
-}
-
-.feed-tts-bubble-text {
-  font-style: italic;
-  font-weight: 600;
-  color: #0369a1;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  filter: grayscale(20%);
 }
 
 /* ==========================================
-   BARRA DE GESTÃO E CONTROLE DA SESSÃO VR
+   TOAST FLUTUANTE DE FEEDBACK GLOBAL
    ========================================== */
-.session-master-bar-glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1.5px solid rgba(226, 232, 240, 0.9);
-  border-radius: 20px;
-  padding: 20px 24px;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  transition: all 0.3s ease;
-}
-
-.session-master-header {
+.floating-feedback-toast {
+  position: fixed;
+  top: 76px;
+  right: 28px;
+  z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.session-master-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
-  min-width: 280px;
-}
-
-.session-pulse-indicator {
-  position: relative;
-  width: 44px;
-  height: 44px;
+  gap: 10px;
+  padding: 12px 20px;
   border-radius: 14px;
-  background: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 1.5px solid #e2e8f0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(16px);
+  border: 1.5px solid;
 }
 
-.session-pulse-indicator.is-active {
+.floating-feedback-toast.success {
   background: #ecfdf5;
+  color: #047857;
   border-color: #a7f3d0;
 }
 
-.status-core-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #94a3b8;
-  transition: all 0.3s ease;
-}
-
-.session-pulse-indicator.is-active .status-core-dot {
-  background: #10b981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
-}
-
-.pulse-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 14px;
-  border: 2px solid #10b981;
-  opacity: 0.6;
-  animation: pulse-ring-anim 2s infinite cubic-bezier(0.25, 0, 0.2, 1);
-}
-
-@keyframes pulse-ring-anim {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 0; }
-  100% { transform: scale(0.95); opacity: 0; }
-}
-
-.session-title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.session-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.session-master-title {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.2px;
-  margin: 0;
-}
-
-.session-state-pill {
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 3px 10px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.session-state-pill.state-active {
-  background: #d1fae5;
-  color: #047857;
-  border: 1px solid #6ee7b7;
-}
-
-.session-state-pill.state-idle {
-  background: #f1f5f9;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-}
-
-.session-master-desc {
-  font-size: 0.84rem;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.session-master-buttons {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.btn-session-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border-radius: 16px;
-  border: none;
-  cursor: pointer;
-  color: #ffffff;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-}
-
-.btn-session-action:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
-}
-
-.btn-session-action:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-session-action:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(35%);
-  box-shadow: none;
-  transform: none;
-}
-
-.btn-start-room {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
-}
-
-.btn-start-room:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.42);
-}
-
-.btn-end-room {
-  background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
-  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.28);
-}
-
-.btn-end-room:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(225, 29, 72, 0.4);
-}
-
-.session-icon-svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-.btn-session-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-}
-
-.btn-main-label {
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: -0.2px;
-}
-
-.btn-sub-label {
-  font-size: 0.72rem;
-  opacity: 0.9;
-  font-weight: 600;
-}
-
-.btn-spinner-session {
-  width: 20px;
-  height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spinner-rotate 0.8s linear infinite;
-}
-
-.session-feedback-toast {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 0.86rem;
-  font-weight: 700;
-}
-
-.session-feedback-toast.success {
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
-}
-
-.session-feedback-toast.error {
+.floating-feedback-toast.error {
   background: #fef2f2;
   color: #b91c1c;
-  border: 1px solid #fecaca;
+  border-color: #fecaca;
 }
 
-.session-toast-icon {
-  font-size: 1.1rem;
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.96);
 }
 
 /* ==========================================
-   CARD DE SONS VR / EFEITOS SONOROS
+   MODAIS: HARDWARE & HISTÓRICO
    ========================================== */
-.command-sounds-card {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fff7ed 100%);
-  border: 1.5px solid #fde68a;
-  border-radius: 18px;
-  padding: 20px 24px;
-  margin-top: 10px;
-  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.08);
+.config-modal-box {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 540px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-.sounds-card-header {
+.config-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.sounds-header-left {
+.config-modal-title-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 260px;
+  gap: 10px;
 }
 
-.sounds-header-icon {
-  font-size: 1.4rem;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  border-radius: 12px;
-  padding: 8px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+.config-modal-title-row h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
 }
 
-.sounds-header-text {
+.config-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.config-modal-body {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 16px;
 }
 
-.sounds-header-title-row {
+.config-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-modal-field label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.custom-select-trigger {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+  cursor: pointer;
+  background: #ffffff;
 }
 
-.sounds-header-title {
-  font-size: 0.88rem;
+.custom-options-dropdown {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-top: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.custom-option {
+  padding: 10px 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.custom-option:hover {
+  background: #f1f5f9;
+}
+
+.custom-option.is-active {
+  background: #eff6ff;
+  color: #0071e3;
   font-weight: 800;
-  color: #92400e;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
 }
 
-.sounds-tech-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: #d97706;
+.custom-option.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.opt-locked-tag {
+  font-size: 0.65rem;
+  background: #fee2e2;
+  color: #ef4444;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.config-modal-input {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.modal-participants-list {
+  max-height: 140px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+.modal-part-item {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.modal-part-item:hover {
+  background: #f8fafc;
+}
+
+.modal-part-item.is-selected {
+  background: #eff6ff;
+  border-left: 3px solid #0071e3;
+}
+
+.btn-save-hardware {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
   color: #ffffff;
-  padding: 2px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-
-.sounds-header-desc {
-  font-size: 0.8rem;
-  color: #b45309;
-  opacity: 0.95;
-}
-
-.sounds-card-body {
+  font-weight: 800;
+  font-size: 0.92rem;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
   width: 100%;
 }
 
-.sounds-buttons-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+.btn-save-hardware:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.btn-vr-sound {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  background: #ffffff;
-  border: 1.5px solid #fed7aa;
-  border-radius: 16px;
+.config-modal-danger-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
+}
+
+.btn-danger-modal-trigger {
+  background: transparent;
+  border: 1.5px solid #fecaca;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  text-align: left;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 3px 12px rgba(217, 119, 6, 0.08);
-  position: relative;
+}
+
+.btn-danger-modal-trigger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+/* HISTÓRICO MODAL */
+.history-modal-box {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
-.btn-vr-sound:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: #f59e0b;
-  box-shadow: 0 8px 22px rgba(217, 119, 6, 0.2);
-  background: #fffdfa;
-}
-
-.btn-vr-sound:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-vr-sound:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  filter: grayscale(20%);
-  box-shadow: none;
-}
-
-.sound-item-icon {
-  font-size: 1.6rem;
-  background: #fff7ed;
-  border-radius: 12px;
-  padding: 8px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 1px solid #fed7aa;
-}
-
-.sound-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.history-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
   flex: 1;
 }
 
-.sound-item-title {
-  font-size: 0.96rem;
-  font-weight: 800;
-  color: #1e293b;
+.history-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.sound-item-desc {
-  font-size: 0.78rem;
-  color: #64748b;
-  line-height: 1.3;
-}
-
-.sound-item-badge {
+.history-feed-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #d97706;
-  background: #fef3c7;
-  padding: 4px 8px;
-  border-radius: 8px;
-  border: 1px solid #fde68a;
-  flex-shrink: 0;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.84rem;
 }
 
-.sound-wave-svg {
-  width: 14px;
-  height: 14px;
-}
-
-.sounds-card-footer {
-  padding-top: 4px;
-  border-top: 1px dashed rgba(217, 119, 6, 0.2);
-}
-
-.sounds-hint {
-  font-size: 0.75rem;
-  color: #92400e;
-}
-
-/* ==========================================
-   FEED ITEMS: SONS & CONTROLE DE SESSÃO
-   ========================================== */
-.command-feed-item.is-sound-item {
-  border-left: 3px solid #f59e0b;
-  background: #fffdf5;
-}
-
-.feed-status-dot.dot-sound {
-  background: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
-}
-
-.feed-conflito.conflito-sound {
-  color: #b45309;
+.history-time {
+  font-size: 0.74rem;
+  color: #64748b;
   font-weight: 700;
 }
 
-.feed-check-tag.check-sound {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
+.history-target {
+  color: #0f172a;
 }
 
-.feed-sound-bubble {
-  display: inline-flex;
+.history-arrow {
+  color: #94a3b8;
+}
+
+.history-conflict {
+  color: #0071e3;
+  font-weight: 700;
+}
+
+.history-conflict code {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.history-tts-text {
+  font-style: italic;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.no-history-msg {
+  color: #64748b;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 30px;
+}
+
+/* MODAL DELETAR (BASE) */
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  z-index: 999;
+}
+
+.delete-modal-box {
   background: #ffffff;
-  border: 1px solid #fde68a;
-  border-radius: 8px;
-  padding: 2px 8px;
-  font-size: 0.8rem;
-  color: #92400e;
+  border-radius: 20px;
+  padding: 28px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
 }
 
-.feed-sound-bubble-icon {
+.delete-icon-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.delete-warn-svg {
+  width: 26px;
+  height: 26px;
+}
+
+.delete-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.delete-modal-subdesc {
   font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
 }
 
-.feed-sound-bubble-text {
+.delete-modal-room-badge {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-cancel-delete {
+  flex: 1;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 11px;
   font-weight: 700;
+  color: #334155;
+  cursor: pointer;
 }
 
-/* Iniciar Sala Feed */
-.command-feed-item.is-start-item {
-  border-left: 3px solid #10b981;
-  background: #f0fdf4;
+.btn-confirm-delete {
+  flex: 1;
+  background: #ef4444;
+  border: none;
+  border-radius: 10px;
+  padding: 11px;
+  font-weight: 800;
+  color: #ffffff;
+  cursor: pointer;
 }
 
-.feed-status-dot.dot-start {
-  background: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+.btn-spinner-tech {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+  display: inline-block;
 }
 
-.feed-conflito.conflito-start {
-  color: #047857;
-  font-weight: 700;
+.btn-spinner-tech.white {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
 }
 
-.feed-check-tag.check-start {
-  background: #d1fae5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+.btn-spinner-tech.red {
+  border: 2px solid rgba(239, 68, 68, 0.2);
+  border-top-color: #ef4444;
 }
 
-/* Encerrar Sala Feed */
-.command-feed-item.is-end-item {
-  border-left: 3px solid #e11d48;
-  background: #fff1f2;
+.btn-spinner-tech.amber {
+  border: 2px solid rgba(217, 119, 6, 0.2);
+  border-top-color: #d97706;
 }
 
-.feed-status-dot.dot-end {
-  background: #e11d48;
-  box-shadow: 0 0 6px rgba(225, 29, 72, 0.6);
-}
-
-.feed-conflito.conflito-end {
-  color: #be123c;
-  font-weight: 700;
-}
-
-.feed-check-tag.check-end {
-  background: #ffe4e6;
-  color: #be123c;
-  border: 1px solid #fecdd3;
-}
-
-/* Animations */
-.dropdown-scale-enter-active,
-.dropdown-scale-leave-active {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dropdown-scale-enter-from,
-.dropdown-scale-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.97);
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
 }
 
 .glass-modal-enter-active, .glass-modal-leave-active {
-  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .glass-modal-enter-from, .glass-modal-leave-to {
   opacity: 0;
