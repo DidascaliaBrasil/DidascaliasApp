@@ -151,6 +151,75 @@
           </div>
         </div>
 
+        <!-- BARRA DE GESTÃO E CONTROLE DA SESSÃO VR (INICIAR / ENCERRAR SALA) -->
+        <div class="session-master-bar-glass">
+          <div class="session-master-header">
+            <div class="session-master-info">
+              <div class="session-pulse-indicator" :class="{ 'is-active': isSalaAtiva(sala) }">
+                <span class="pulse-ring" v-if="isSalaAtiva(sala)"></span>
+                <span class="status-core-dot"></span>
+              </div>
+              <div class="session-title-wrap">
+                <div class="session-title-row">
+                  <h2 class="session-master-title">Controle Geral da Sala VR</h2>
+                  <span :class="['session-state-pill', isSalaAtiva(sala) ? 'state-active' : 'state-idle']">
+                    {{ isSalaAtiva(sala) ? 'Simulação em Andamento' : 'Simulação em Espera' }}
+                  </span>
+                </div>
+                <p class="session-master-desc">
+                  {{ isSalaAtiva(sala) ? 'A sala está ativa e conectada ao headset. Utilize os botões para controlar a sessão ou encerrá-la.' : 'A sala está inativa no momento. Clique em "Iniciar a Sala" para liberar a simulação e os comandos no óculos VR.' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="session-master-buttons">
+              <!-- Botão 1: Iniciar Sala -->
+              <button
+                type="button"
+                class="btn-session-action btn-start-room"
+                :disabled="isSalaAtiva(sala) || iniciandoSala || encerrandoSala || !podeModificarEControlar"
+                @click="iniciarSalaVR"
+                :title="isSalaAtiva(sala) ? 'A sala já está ativa' : !podeModificarEControlar ? 'Requer FacilitadorPlus' : 'Iniciar a sala e simulação no óculos VR'"
+              >
+                <span v-if="iniciandoSala" class="btn-spinner-session"></span>
+                <svg v-else viewBox="0 0 24 24" fill="currentColor" class="session-icon-svg">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <div class="btn-session-text">
+                  <span class="btn-main-label">{{ iniciandoSala ? 'Iniciando...' : 'Iniciar a Sala' }}</span>
+                  <span class="btn-sub-label">{{ isSalaAtiva(sala) ? 'Sala já Ativa' : 'Transmitir ao VR' }}</span>
+                </div>
+              </button>
+
+              <!-- Botão 2: Encerrar Sala -->
+              <button
+                type="button"
+                class="btn-session-action btn-end-room"
+                :disabled="!isSalaAtiva(sala) || iniciandoSala || encerrandoSala || !podeModificarEControlar"
+                @click="encerrarSalaVR"
+                :title="!isSalaAtiva(sala) ? 'A sala já está inativa' : !podeModificarEControlar ? 'Requer FacilitadorPlus' : 'Encerrar a simulação e finalizar a sessão no óculos VR'"
+              >
+                <span v-if="encerrandoSala" class="btn-spinner-session"></span>
+                <svg v-else viewBox="0 0 24 24" fill="currentColor" class="session-icon-svg">
+                  <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+                </svg>
+                <div class="btn-session-text">
+                  <span class="btn-main-label">{{ encerrandoSala ? 'Encerrando...' : 'Encerrar a Sala' }}</span>
+                  <span class="btn-sub-label">{{ !isSalaAtiva(sala) ? 'Sala Inativa' : 'Finalizar no VR' }}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Toast de Feedback de Sessão -->
+          <Transition name="fade-fast">
+            <div v-if="feedbackSessao" class="session-feedback-toast" :class="feedbackSessao.tipo">
+              <span class="session-toast-icon">{{ feedbackSessao.tipo === 'success' ? '⚡' : '⚠️' }}</span>
+              <span class="session-toast-text">{{ feedbackSessao.texto }}</span>
+            </div>
+          </Transition>
+        </div>
+
         <!-- Alerta de Modo Somente Leitura para Instituições sem FacilitadorPlus -->
         <div v-if="isInstituicao && !isFacilitadorPlus" class="instituicao-readonly-alert">
           <div class="readonly-alert-icon">👁️</div>
@@ -1035,6 +1104,59 @@
                   </div>
                 </div>
 
+                <!-- SEÇÃO DEDICADA: EFEITOS SONOROS / SONS DA SALA VR (EXTENSÍVEL) -->
+                <div class="command-sounds-card">
+                  <div class="sounds-card-header">
+                    <div class="sounds-header-left">
+                      <span class="sounds-header-icon">🔔</span>
+                      <div class="sounds-header-text">
+                        <div class="sounds-header-title-row">
+                          <span class="sounds-header-title">Efeitos Sonoros & Ambientação da Sala</span>
+                          <span class="sounds-tech-tag">Áudio Imersivo VR</span>
+                        </div>
+                        <span class="sounds-header-desc">
+                          Dispare efeitos sonoros em tempo real no ambiente virtual da sala para ambientação e testes sensoriais.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="sounds-card-body">
+                    <div class="sounds-buttons-grid">
+                      <button
+                        v-for="som in SONS_VR"
+                        :key="som.id"
+                        type="button"
+                        class="btn-vr-sound"
+                        :class="{ 'is-active-loading': somEmExecucao === som.id }"
+                        :disabled="somEmExecucao !== '' || cooldownDisparo || enviandoComando || enviandoTTS || enviandoReset !== '' || !isSalaAtiva(sala) || !podeModificarEControlar"
+                        @click="dispararSomVR(som)"
+                        :title="!isSalaAtiva(sala) ? 'Inicie a sala para disparar sons' : !podeModificarEControlar ? 'Requer FacilitadorPlus' : `Disparar som de ${som.label} no VR`"
+                      >
+                        <span v-if="somEmExecucao === som.id" class="btn-spinner-tech"></span>
+                        <span v-else class="sound-item-icon">{{ som.icon }}</span>
+                        <div class="sound-item-info">
+                          <strong class="sound-item-title">{{ som.label }}</strong>
+                          <span class="sound-item-desc">{{ som.desc }}</span>
+                        </div>
+                        <div class="sound-item-badge">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sound-wave-svg">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                          </svg>
+                          <span>Tocar no VR</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="sounds-card-footer">
+                    <span class="sounds-hint">
+                      💡 <strong>Extensibilidade:</strong> Os sons são transmitidos via comando do facilitador para o headset VR e novos botões podem ser adicionados conforme a necessidade pedagógica.
+                    </span>
+                  </div>
+                </div>
+
                 <!-- BARRA DE REINICIALIZAÇÃO (BOTÕES VERMELHOS DE RESET VR) -->
                 <div class="command-reset-bar">
                   <div class="reset-bar-header">
@@ -1111,7 +1233,10 @@
                       class="command-feed-item"
                       :class="{ 
                         'is-reset-item': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                        'is-tts-item': cmd.tipo_conflito === 'TextToSpeech'
+                        'is-tts-item': cmd.tipo_conflito === 'TextToSpeech',
+                        'is-sound-item': cmd.tipo_conflito === 'PlaySound',
+                        'is-start-item': cmd.tipo_conflito === 'StartRoom',
+                        'is-end-item': cmd.tipo_conflito === 'EndRoom'
                       }"
                     >
                       <div class="feed-item-left">
@@ -1119,12 +1244,15 @@
                           class="feed-status-dot" 
                           :class="{ 
                             'dot-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                            'dot-tts': cmd.tipo_conflito === 'TextToSpeech'
+                            'dot-tts': cmd.tipo_conflito === 'TextToSpeech',
+                            'dot-sound': cmd.tipo_conflito === 'PlaySound',
+                            'dot-start': cmd.tipo_conflito === 'StartRoom',
+                            'dot-end': cmd.tipo_conflito === 'EndRoom'
                           }"
                         ></span>
                         <span class="feed-time">{{ formatHoraComando(cmd.timestamp) }}</span>
                         <div class="feed-aluno-pill notranslate" translate="no" :class="{ 'all-students-pill': !cmd.aluno_alvo }">
-                          <span class="feed-aluno-name">{{ cmd.aluno_alvo || 'Todos os Estudantes' }}</span>
+                          <span class="feed-aluno-name">{{ cmd.aluno_alvo || (cmd.tipo_conflito === 'PlaySound' ? 'Ambiente da Sala' : (cmd.tipo_conflito === 'StartRoom' || cmd.tipo_conflito === 'EndRoom') ? 'Sessão da Sala' : 'Todos os Estudantes') }}</span>
                           <span v-if="cmd.aluno_alvo && getCondicaoAlunoVR(cmd.aluno_alvo) && (getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' || getCondicaoAlunoVR(cmd.aluno_alvo) === 'TDAH')" :class="['feed-cond-tag', getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? 'cond-tea' : 'cond-tdah']">
                             {{ getCondicaoAlunoVR(cmd.aluno_alvo) === 'TEA' ? '🧩 TEA' : '⚡ TDAH' }}
                           </span>
@@ -1134,11 +1262,14 @@
                           class="feed-conflito" 
                           :class="{ 
                             'conflito-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                            'conflito-tts': cmd.tipo_conflito === 'TextToSpeech'
+                            'conflito-tts': cmd.tipo_conflito === 'TextToSpeech',
+                            'conflito-sound': cmd.tipo_conflito === 'PlaySound',
+                            'conflito-start': cmd.tipo_conflito === 'StartRoom',
+                            'conflito-end': cmd.tipo_conflito === 'EndRoom'
                           }"
                         >
-                          {{ getNomeConflito(cmd.tipo_conflito) }}
-                          <code class="feed-code">({{ cmd.tipo_conflito }})</code>
+                          {{ getNomeConflito(cmd.tipo_conflito, cmd) }}
+                          <code class="feed-code">({{ cmd.tipo_conflito }}{{ cmd.som ? `:${cmd.som}` : '' }})</code>
                         </span>
 
                         <!-- Mensagem verbalizada se for TextToSpeech -->
@@ -1146,15 +1277,24 @@
                           <span class="feed-tts-bubble-icon">💬</span>
                           <span class="feed-tts-bubble-text">“{{ cmd.mensagem }}”</span>
                         </div>
+
+                        <!-- Efeito sonoro se for PlaySound -->
+                        <div v-if="cmd.tipo_conflito === 'PlaySound' && cmd.som" class="feed-sound-bubble" title="Efeito sonoro disparado">
+                          <span class="feed-sound-bubble-icon">🔔</span>
+                          <span class="feed-sound-bubble-text">{{ cmd.som === 'SchoolBell' ? 'Sirene Escolar' : cmd.som }}</span>
+                        </div>
                       </div>
                       <span 
                         class="feed-check-tag" 
                         :class="{ 
                           'check-reset': cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent',
-                          'check-tts': cmd.tipo_conflito === 'TextToSpeech'
+                          'check-tts': cmd.tipo_conflito === 'TextToSpeech',
+                          'check-sound': cmd.tipo_conflito === 'PlaySound',
+                          'check-start': cmd.tipo_conflito === 'StartRoom',
+                          'check-end': cmd.tipo_conflito === 'EndRoom'
                         }"
                       >
-                        {{ cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' ? '🔄 Reset VR' : cmd.tipo_conflito === 'TextToSpeech' ? '🗣️ Fala no VR' : '✓ No VR' }}
+                        {{ cmd.tipo_conflito === 'ResetAllStudents' || cmd.tipo_conflito === 'ResetSingleStudent' ? '🔄 Reset VR' : cmd.tipo_conflito === 'TextToSpeech' ? '🗣️ Fala no VR' : cmd.tipo_conflito === 'PlaySound' ? '🔔 Áudio VR' : cmd.tipo_conflito === 'StartRoom' ? '▶ Início' : cmd.tipo_conflito === 'EndRoom' ? '⏹ Término' : '✓ No VR' }}
                       </span>
                     </div>
                   </div>
@@ -1420,6 +1560,24 @@ const cooldownDisparo = ref(false)
 const feedbackComando = ref(null)
 
 // ==========================================
+// CONTROLE DE SESSÃO DA SALA & EFEITOS SONOROS VR
+// ==========================================
+const iniciandoSala = ref(false)
+const encerrandoSala = ref(false)
+const feedbackSessao = ref(null)
+const somEmExecucao = ref('')
+
+const SONS_VR = [
+  {
+    id: 'SchoolBell',
+    label: 'Sirene Escolar',
+    icon: '🔔',
+    categoria: 'ambiente',
+    desc: 'Sinal sonoro de troca/início de aula no headset VR'
+  }
+]
+
+// ==========================================
 // CONTROLE DE PERMISSÕES & FACILITADOR PLUS
 // ==========================================
 const facilitadorPlusAtivo = ref(false)
@@ -1646,9 +1804,16 @@ const historicoComandos = computed(() => {
     .slice(0, 10)
 })
 
-const getNomeConflito = (tipoId) => {
+const getNomeConflito = (tipoId, cmd) => {
   const c = CONFLITOS_VR.find(item => item.id === tipoId)
   if (c) return c.label
+  if (tipoId === 'StartRoom') return 'Iniciar Sala'
+  if (tipoId === 'EndRoom') return 'Encerrar Sala'
+  if (tipoId === 'PlaySound') {
+    if (cmd?.som === 'SchoolBell') return 'Sirene Escolar'
+    const somObj = SONS_VR.find(s => s.id === cmd?.som)
+    return somObj ? somObj.label : 'Efeito Sonoro'
+  }
   if (tipoId === 'TextToSpeech') return 'Fala do Estudante (TTS)'
   if (tipoId === 'ResetAllStudents') return 'Reiniciar Todos Estudantes'
   if (tipoId === 'ResetSingleStudent') return 'Reiniciar Estudante Selecionado'
@@ -1943,6 +2108,202 @@ const reiniciarTodosEstudantes = async () => {
     }
   } finally {
     enviandoReset.value = ''
+    setTimeout(() => {
+      cooldownDisparo.value = false
+    }, 1200)
+    setTimeout(() => {
+      if (feedbackComando.value?.tipo === 'success') {
+        feedbackComando.value = null
+      }
+    }, 6000)
+  }
+}
+
+// ==========================================
+// MÉTODOS DE CONTROLE DA SESSÃO (INICIAR / ENCERRAR) E SONS VR
+// ==========================================
+const iniciarSalaVR = async () => {
+  if (iniciandoSala.value || encerrandoSala.value) return
+
+  if (!podeModificarEControlar.value) {
+    feedbackSessao.value = {
+      tipo: 'error',
+      texto: 'Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para iniciar a sala no VR.'
+    }
+    return
+  }
+
+  if (isSalaAtiva(sala.value)) {
+    feedbackSessao.value = {
+      tipo: 'error',
+      texto: 'Esta sala já está com a simulação ativa no óculos VR.'
+    }
+    return
+  }
+
+  iniciandoSala.value = true
+  feedbackSessao.value = null
+
+  try {
+    const timestampAtual = Date.now()
+    const payload = {
+      tipo_conflito: 'StartRoom',
+      timestamp: timestampAtual
+    }
+
+    // 1. Enviar comando para comando_facilitador
+    const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
+    await push(comandosRef, payload)
+
+    // 2. Atualizar situacao_atual no Firebase
+    const situacaoRef = dbRef(database, `classroom_configs/${sala.value.id}/situacao_atual`)
+    await update(situacaoRef, { ativo: 'sim' })
+
+    if (sala.value) {
+      if (!sala.value.situacao_atual || typeof sala.value.situacao_atual !== 'object') {
+        sala.value.situacao_atual = { ativo: 'sim' }
+      } else {
+        sala.value.situacao_atual.ativo = 'sim'
+      }
+    }
+
+    // Abre o menu 3 de comandos automaticamente para facilitar
+    menu3Aberto.value = true
+
+    feedbackSessao.value = {
+      tipo: 'success',
+      texto: 'Sala iniciada com sucesso! Simulação ativa no VR e painel de comandos liberado.'
+    }
+  } catch (error) {
+    console.error("Erro ao iniciar sala VR:", error)
+    feedbackSessao.value = {
+      tipo: 'error',
+      texto: 'Ocorreu um erro ao iniciar a sala no Firebase. Tente novamente.'
+    }
+  } finally {
+    iniciandoSala.value = false
+    setTimeout(() => {
+      if (feedbackSessao.value?.tipo === 'success') {
+        feedbackSessao.value = null
+      }
+    }, 6000)
+  }
+}
+
+const encerrarSalaVR = async () => {
+  if (iniciandoSala.value || encerrandoSala.value) return
+
+  if (!podeModificarEControlar.value) {
+    feedbackSessao.value = {
+      tipo: 'error',
+      texto: 'Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para encerrar a sala no VR.'
+    }
+    return
+  }
+
+  if (!isSalaAtiva(sala.value)) {
+    feedbackSessao.value = {
+      tipo: 'error',
+      texto: 'Esta sala já está inativa no óculos VR.'
+    }
+    return
+  }
+
+  encerrandoSala.value = true
+  feedbackSessao.value = null
+
+  try {
+    const timestampAtual = Date.now()
+    const payload = {
+      tipo_conflito: 'EndRoom',
+      timestamp: timestampAtual
+    }
+
+    // 1. Enviar comando para comando_facilitador
+    const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
+    await push(comandosRef, payload)
+
+    // 2. Atualizar situacao_atual no Firebase
+    const situacaoRef = dbRef(database, `classroom_configs/${sala.value.id}/situacao_atual`)
+    await update(situacaoRef, { ativo: 'nao' })
+
+    if (sala.value) {
+      if (!sala.value.situacao_atual || typeof sala.value.situacao_atual !== 'object') {
+        sala.value.situacao_atual = { ativo: 'nao' }
+      } else {
+        sala.value.situacao_atual.ativo = 'nao'
+      }
+    }
+
+    // Fecha o menu 3 de comandos já que a sala foi encerrada
+    menu3Aberto.value = false
+
+    feedbackSessao.value = {
+      tipo: 'success',
+      texto: 'Sala encerrada com sucesso no VR.'
+    }
+  } catch (error) {
+    console.error("Erro ao encerrar sala VR:", error)
+    feedbackSessao.value = {
+      tipo: 'error',
+      texto: 'Ocorreu um erro ao encerrar a sala no Firebase. Tente novamente.'
+    }
+  } finally {
+    encerrandoSala.value = false
+    setTimeout(() => {
+      if (feedbackSessao.value?.tipo === 'success') {
+        feedbackSessao.value = null
+      }
+    }, 6000)
+  }
+}
+
+const dispararSomVR = async (som) => {
+  if (somEmExecucao.value || cooldownDisparo.value || enviandoComando.value || enviandoTTS.value || enviandoReset.value) return
+
+  if (!podeModificarEControlar.value) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Sua instituição possui acesso de visualização. É necessário FacilitadorPlus para disparar sons no VR.'
+    }
+    return
+  }
+
+  if (!isSalaAtiva(sala.value)) {
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Esta sala não está ativa no momento. Inicie a simulação no óculos VR para disparar efeitos sonoros.'
+    }
+    return
+  }
+
+  somEmExecucao.value = som.id
+  cooldownDisparo.value = true
+  feedbackComando.value = null
+
+  try {
+    const timestampAtual = Date.now()
+    const payload = {
+      tipo_conflito: 'PlaySound',
+      som: som.id,
+      timestamp: timestampAtual
+    }
+
+    const comandosRef = dbRef(database, `classroom_configs/${sala.value.id}/comando_facilitador`)
+    await push(comandosRef, payload)
+
+    feedbackComando.value = {
+      tipo: 'success',
+      texto: `Efeito sonoro "${som.label}" disparado com sucesso no VR!`
+    }
+  } catch (error) {
+    console.error("Erro ao disparar som no VR:", error)
+    feedbackComando.value = {
+      tipo: 'error',
+      texto: 'Ocorreu um erro ao disparar o som para o Firebase. Tente novamente.'
+    }
+  } finally {
+    somEmExecucao.value = ''
     setTimeout(() => {
       cooldownDisparo.value = false
     }, 1200)
@@ -6060,6 +6421,523 @@ onUnmounted(() => {
   color: #0369a1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ==========================================
+   BARRA DE GESTÃO E CONTROLE DA SESSÃO VR
+   ========================================== */
+.session-master-bar-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.session-master-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.session-master-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.session-pulse-indicator {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid #e2e8f0;
+}
+
+.session-pulse-indicator.is-active {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.status-core-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #94a3b8;
+  transition: all 0.3s ease;
+}
+
+.session-pulse-indicator.is-active .status-core-dot {
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  border: 2px solid #10b981;
+  opacity: 0.6;
+  animation: pulse-ring-anim 2s infinite cubic-bezier(0.25, 0, 0.2, 1);
+}
+
+@keyframes pulse-ring-anim {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+
+.session-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.session-master-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.session-state-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.session-state-pill.state-active {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+}
+
+.session-state-pill.state-idle {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.session-master-desc {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.session-master-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-session-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.btn-session-action:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.btn-session-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-session-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(35%);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-start-room {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.btn-start-room:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.42);
+}
+
+.btn-end-room {
+  background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.28);
+}
+
+.btn-end-room:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(225, 29, 72, 0.4);
+}
+
+.session-icon-svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.btn-session-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.btn-main-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.btn-sub-label {
+  font-size: 0.72rem;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.btn-spinner-session {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+.session-feedback-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.session-feedback-toast.success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.session-feedback-toast.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.session-toast-icon {
+  font-size: 1.1rem;
+}
+
+/* ==========================================
+   CARD DE SONS VR / EFEITOS SONOROS
+   ========================================== */
+.command-sounds-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fff7ed 100%);
+  border: 1.5px solid #fde68a;
+  border-radius: 18px;
+  padding: 20px 24px;
+  margin-top: 10px;
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.08);
+}
+
+.sounds-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sounds-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.sounds-header-icon {
+  font-size: 1.4rem;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.sounds-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sounds-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sounds-header-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #92400e;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.sounds-tech-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #d97706;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.sounds-header-desc {
+  font-size: 0.8rem;
+  color: #b45309;
+  opacity: 0.95;
+}
+
+.sounds-card-body {
+  width: 100%;
+}
+
+.sounds-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.btn-vr-sound {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: #ffffff;
+  border: 1.5px solid #fed7aa;
+  border-radius: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 12px rgba(217, 119, 6, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-vr-sound:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #f59e0b;
+  box-shadow: 0 8px 22px rgba(217, 119, 6, 0.2);
+  background: #fffdfa;
+}
+
+.btn-vr-sound:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-vr-sound:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(20%);
+  box-shadow: none;
+}
+
+.sound-item-icon {
+  font-size: 1.6rem;
+  background: #fff7ed;
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #fed7aa;
+}
+
+.sound-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.sound-item-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.sound-item-desc {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.sound-item-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #d97706;
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+  flex-shrink: 0;
+}
+
+.sound-wave-svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sounds-card-footer {
+  padding-top: 4px;
+  border-top: 1px dashed rgba(217, 119, 6, 0.2);
+}
+
+.sounds-hint {
+  font-size: 0.75rem;
+  color: #92400e;
+}
+
+/* ==========================================
+   FEED ITEMS: SONS & CONTROLE DE SESSÃO
+   ========================================== */
+.command-feed-item.is-sound-item {
+  border-left: 3px solid #f59e0b;
+  background: #fffdf5;
+}
+
+.feed-status-dot.dot-sound {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.feed-conflito.conflito-sound {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.feed-check-tag.check-sound {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.feed-sound-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  color: #92400e;
+}
+
+.feed-sound-bubble-icon {
+  font-size: 0.85rem;
+}
+
+.feed-sound-bubble-text {
+  font-weight: 700;
+}
+
+/* Iniciar Sala Feed */
+.command-feed-item.is-start-item {
+  border-left: 3px solid #10b981;
+  background: #f0fdf4;
+}
+
+.feed-status-dot.dot-start {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.feed-conflito.conflito-start {
+  color: #047857;
+  font-weight: 700;
+}
+
+.feed-check-tag.check-start {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+/* Encerrar Sala Feed */
+.command-feed-item.is-end-item {
+  border-left: 3px solid #e11d48;
+  background: #fff1f2;
+}
+
+.feed-status-dot.dot-end {
+  background: #e11d48;
+  box-shadow: 0 0 6px rgba(225, 29, 72, 0.6);
+}
+
+.feed-conflito.conflito-end {
+  color: #be123c;
+  font-weight: 700;
+}
+
+.feed-check-tag.check-end {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
 }
 
 /* Animations */
