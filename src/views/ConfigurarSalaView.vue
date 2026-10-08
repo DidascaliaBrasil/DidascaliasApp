@@ -173,143 +173,260 @@
             <!-- DIVISÓRIA SUTIL DIDASCALIAS -->
             <div class="didas-subtle-divider"></div>
 
-            <!-- ÁREA DE CENÁRIOS E SONS (COM GAVETA EXPANSÍVEL QUE COBRE OS CENÁRIOS) -->
-            <div class="scenarios-and-sounds-wrapper">
+            <!-- ÁREA DIVIDIDA: CENÁRIOS/SONS (ESQUERDA) + PLAYER DE VÍDEO (MEIO) -->
+            <div class="console-main-content-split">
 
-              <!-- SEÇÃO 2: CENÁRIOS / CONFLITOS VR (DISPARO IMEDIATO) -->
-              <div class="scenarios-section">
-                <div class="scenarios-header-row">
-                  <div class="scenarios-title-wrap">
-                    <h2 class="scenarios-title">Cenários</h2>
-                    <span class="scenarios-subtitle">Clique em um cenário para disparar imediatamente no VR</span>
+              <!-- ============================================== -->
+              <!-- SUB-COLUNA 1: CENÁRIOS & SONS (ESQUERDA)       -->
+              <!-- ============================================== -->
+              <div class="scenarios-and-sounds-wrapper">
+
+                <!-- SEÇÃO 2: CENÁRIOS / CONFLITOS VR (DISPARO IMEDIATO) -->
+                <div class="scenarios-section">
+                  <div class="scenarios-pane-header">
+                    <div class="scenarios-title-row">
+                      <div class="scenarios-title-wrap">
+                        <h2 class="scenarios-title">Cenários</h2>
+                        <span class="scenarios-counter-tag">{{ acoesFiltradas.length }}</span>
+                      </div>
+                      <span class="scenarios-quick-hint">Clique para disparar</span>
+                    </div>
+
+                    <!-- Filtros Rápidos de Categoria -->
+                    <div class="scenarios-filter-scroll">
+                      <button
+                        v-for="cat in categoriasFiltro"
+                        :key="cat.id"
+                        type="button"
+                        class="filter-pill-btn"
+                        :class="{ 'is-active': categoriaAcaoAtiva === cat.id }"
+                        @click="categoriaAcaoAtiva = cat.id"
+                      >
+                        <span>{{ cat.icon }}</span>
+                        <span>{{ cat.label }}</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <!-- Filtros Rápidos de Categoria -->
-                  <div class="scenarios-filter-pills">
-                    <button
-                      v-for="cat in categoriasFiltro"
-                      :key="cat.id"
-                      type="button"
-                      class="filter-pill-btn"
-                      :class="{ 'is-active': categoriaAcaoAtiva === cat.id }"
-                      @click="categoriaAcaoAtiva = cat.id"
+                  <!-- Lista Compacta de Cenários -->
+                  <div class="scenarios-compact-list">
+                    <div
+                      v-for="acao in acoesFiltradas"
+                      :key="acao.id"
+                      class="scenario-compact-card"
+                      :class="{
+                        'is-firing': acaoEmDisparo === acao.id,
+                        'is-locked': !isAcaoDisponivelParaAluno(acao),
+                        'is-tea-exclusive': acao.condicaoExclusiva === 'TEA',
+                        'is-tdah-exclusive': acao.condicaoExclusiva === 'TDAH'
+                      }"
                     >
-                      <span>{{ cat.icon }}</span>
-                      <span>{{ cat.label }}</span>
-                    </button>
+                      <!-- BOTÃO PRINCIPAL DE AÇÃO (DISPARO IMEDIATO NO VR) -->
+                      <button
+                        type="button"
+                        class="scenario-btn-action"
+                        :disabled="acaoEmDisparo !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar || !isAcaoDisponivelParaAluno(acao)"
+                        @click="dispararCenarioImediato(acao)"
+                        :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : `Disparar ${acao.label} imediatamente para ${alunoAlvoSelecionado}`"
+                      >
+                        <span class="scenario-btn-icon">{{ acao.icon }}</span>
+                        <span class="scenario-btn-label">{{ acao.label }}</span>
+                        <span v-if="acaoEmDisparo === acao.id" class="btn-spinner-tech red"></span>
+                      </button>
+
+                      <!-- PARTE DIREITA: BADGE TEA/TDAH E INTERROGAÇÃO (?) -->
+                      <div class="scenario-btn-meta">
+                        <span 
+                          v-if="acao.condicaoExclusiva" 
+                          class="scenario-cond-pill" 
+                          :class="acao.condicaoExclusiva.toLowerCase()"
+                          :title="`Exclusivo para estudantes com ${acao.condicaoExclusiva}`"
+                        >
+                          {{ acao.condicaoExclusiva }}
+                        </span>
+
+                        <!-- INTERROGAÇÃO COM TOOLTIP AO PASSAR O MOUSE -->
+                        <div class="scenario-help-wrapper" @click.stop.prevent>
+                          <span 
+                            class="scenario-help-icon" 
+                            :title="`${acao.label}: ${acao.desc}`"
+                            aria-label="Descrição do conflito"
+                          >?</span>
+
+                          <div class="scenario-desc-tooltip" role="tooltip">
+                            <div class="tooltip-header">
+                              <span class="tooltip-icon">{{ acao.icon }}</span>
+                              <strong class="tooltip-title">{{ acao.label }}</strong>
+                              <span v-if="acao.condicaoExclusiva" class="tooltip-chip" :class="acao.condicaoExclusiva.toLowerCase()">
+                                {{ acao.condicaoExclusiva }}
+                              </span>
+                            </div>
+                            <p class="tooltip-text">{{ acao.desc }}</p>
+                            <div class="tooltip-arrow"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Grade de Cenários (Estilo Didascalias: Cards com acento suave e disparo imediato) -->
-                <div class="scenarios-grid">
-                  <button
-                    v-for="acao in acoesFiltradas"
-                    :key="acao.id"
-                    type="button"
-                    class="scenario-glass-card"
-                    :class="{
-                      'is-firing': acaoEmDisparo === acao.id,
-                      'is-locked': !isAcaoDisponivelParaAluno(acao),
-                      'is-tea-exclusive': acao.condicaoExclusiva === 'TEA',
-                      'is-tdah-exclusive': acao.condicaoExclusiva === 'TDAH'
-                    }"
-                    :disabled="acaoEmDisparo !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar || !isAcaoDisponivelParaAluno(acao)"
-                    @click="dispararCenarioImediato(acao)"
-                    :title="!isAcaoDisponivelParaAluno(acao) ? getAcaoLockReason(acao) : `Disparar ${acao.label} imediatamente para ${alunoAlvoSelecionado}`"
+                <!-- DOCK COMPACTO INFERIOR: SONS DA SALA -->
+                <div 
+                  class="sounds-dock-bar"
+                  @click="painelSonsAberto = true"
+                  title="Clique para abrir e expandir a gaveta de sons da sala sobre os cenários"
+                >
+                  <div class="sounds-dock-left">
+                    <span class="sounds-dock-icon">🔔</span>
+                    <div class="sounds-dock-text-group">
+                      <strong class="sounds-dock-title">Sons da Sala</strong>
+                      <span class="sounds-dock-count-badge">{{ SONS_VR.length }}</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    class="btn-sounds-dock-trigger"
+                    @click.stop="painelSonsAberto = true"
+                    title="Expandir painel de sons"
                   >
-                    <div class="scenario-card-header">
-                      <span class="scenario-icon-box">{{ acao.icon }}</span>
-                      <span v-if="acao.condicaoExclusiva" class="scenario-cond-badge" :class="acao.condicaoExclusiva.toLowerCase()">
-                        {{ acao.condicaoExclusiva }}
-                      </span>
-                    </div>
-
-                    <strong class="scenario-card-title">{{ acao.label }}</strong>
-                    <span class="scenario-card-desc">{{ acao.desc }}</span>
-
-                    <div class="scenario-card-footer">
-                      <span v-if="acaoEmDisparo === acao.id" class="btn-spinner-tech red"></span>
-                      <span v-else class="instant-trigger-badge">⚡ Disparo Imediato</span>
-                    </div>
+                    <span>Abrir Sons</span>
+                    <span class="dock-arrow-icon">▲</span>
                   </button>
                 </div>
-              </div>
 
-              <!-- DOCK COMPACTO INFERIOR: SONS DA SALA (BARRA COM SETINHA) -->
-              <div 
-                class="sounds-dock-bar"
-                @click="painelSonsAberto = true"
-                title="Clique para abrir e expandir a gaveta de sons da sala sobre os cenários"
-              >
-                <div class="sounds-dock-left">
-                  <span class="sounds-dock-icon">🔔</span>
-                  <strong class="sounds-dock-title">Sons da Sala</strong>
-                  <span class="sounds-dock-tech">Áudio Imersivo</span>
-                  <span class="sounds-dock-count">{{ SONS_VR.length }} disponível</span>
-                </div>
-
-                <div class="sounds-dock-center">
-                  <span class="sounds-dock-hint">Clique para expandir efeitos sonoros sobre os cenários</span>
-                </div>
-
-                <button 
-                  type="button" 
-                  class="btn-sounds-dock-trigger"
-                  @click.stop="painelSonsAberto = true"
-                  title="Expandir painel de sons"
-                >
-                  <span>Abrir Sons</span>
-                  <span class="dock-arrow-icon">▲</span>
-                </button>
-              </div>
-
-              <!-- PAINEL EXPANSÍVEL DE SONS (COBRE OS CENÁRIOS AO ABRIR) -->
-              <Transition name="sounds-drawer-expand">
-                <div v-if="painelSonsAberto" class="sounds-expanded-drawer">
-                  <div class="sounds-drawer-header">
-                    <div class="sounds-drawer-header-left">
-                      <div class="sounds-drawer-badge-wrap">
-                        <span class="sounds-drawer-icon">🔔</span>
-                        <h3 class="sounds-drawer-title">Sons da Sala</h3>
-                        <span class="sounds-drawer-tech">Áudio Imersivo</span>
+                <!-- PAINEL EXPANSÍVEL DE SONS (COBRE APENAS OS CENÁRIOS AO ABRIR) -->
+                <Transition name="sounds-drawer-expand">
+                  <div v-if="painelSonsAberto" class="sounds-expanded-drawer">
+                    <div class="sounds-drawer-header">
+                      <div class="sounds-drawer-header-left">
+                        <div class="sounds-drawer-badge-wrap">
+                          <span class="sounds-drawer-icon">🔔</span>
+                          <h3 class="sounds-drawer-title">Sons da Sala</h3>
+                          <span class="sounds-drawer-tech">Áudio Imersivo</span>
+                        </div>
+                        <span class="sounds-drawer-subtitle">Dispare efeitos sonoros diretamente no headset VR</span>
                       </div>
-                      <span class="sounds-drawer-subtitle">Dispare efeitos sonoros diretamente no headset VR</span>
+
+                      <button 
+                        type="button" 
+                        class="btn-sounds-drawer-collapse"
+                        @click="painelSonsAberto = false"
+                        title="Recolher painel de sons e voltar aos cenários"
+                      >
+                        <span>Fechar</span>
+                        <span class="collapse-arrow-icon">▼</span>
+                      </button>
                     </div>
 
-                    <button 
-                      type="button" 
-                      class="btn-sounds-drawer-collapse"
-                      @click="painelSonsAberto = false"
-                      title="Recolher painel de sons e voltar aos cenários"
-                    >
-                      <span>Recolher Sons</span>
-                      <span class="collapse-arrow-icon">▼</span>
-                    </button>
+                    <!-- Grade de Sons quando expandido -->
+                    <div class="sounds-drawer-grid">
+                      <button
+                        v-for="som in SONS_VR"
+                        :key="som.id"
+                        type="button"
+                        class="sound-glass-card"
+                        :class="{ 'is-firing': somEmExecucao === som.id }"
+                        :disabled="somEmExecucao !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar"
+                        @click="dispararSomVR(som)"
+                        :title="`Tocar ${som.label} no VR`"
+                      >
+                        <span v-if="somEmExecucao === som.id" class="btn-spinner-tech amber"></span>
+                        <span v-else class="sound-card-icon">{{ som.icon }}</span>
+                        <div class="sound-card-info">
+                          <strong class="sound-card-label">{{ som.label }}</strong>
+                          <span class="sound-card-desc">{{ som.desc }}</span>
+                        </div>
+                        <span class="sound-fire-pill">Tocar no VR</span>
+                      </button>
+                    </div>
+                  </div>
+                </Transition>
+
+              </div>
+
+              <!-- ============================================== -->
+              <!-- SUB-COLUNA 2: PLAYER DE VÍDEO (NO MEIO)        -->
+              <!-- ============================================== -->
+              <div class="console-video-column" ref="videoContainerRef">
+                <div class="video-player-card">
+                  
+                  <!-- BARRA SUPERIOR LIMPA (BRANCO E CINZA) -->
+                  <div class="video-player-topbar">
+                    <div class="video-topbar-title-wrap">
+                      <span class="video-topbar-dot"></span>
+                      <span class="video-topbar-title">Transmissão da Sala</span>
+                    </div>
+
+                    <div class="video-topbar-actions">
+                      <button 
+                        type="button" 
+                        class="btn-player-action"
+                        @click="abrirNovaAbaTransmissao"
+                        title="Abrir transmissão em uma nova aba"
+                      >
+                        <span class="action-icon">↗</span>
+                        <span>Nova Aba</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <!-- Grade de Sons quando expandido -->
-                  <div class="sounds-drawer-grid">
-                    <button
-                      v-for="som in SONS_VR"
-                      :key="som.id"
-                      type="button"
-                      class="sound-glass-card"
-                      :class="{ 'is-firing': somEmExecucao === som.id }"
-                      :disabled="somEmExecucao !== '' || cooldownDisparo || !isSalaAtiva(sala) || !podeModificarEControlar"
-                      @click="dispararSomVR(som)"
-                      :title="`Tocar ${som.label} no VR`"
-                    >
-                      <span v-if="somEmExecucao === som.id" class="btn-spinner-tech amber"></span>
-                      <span v-else class="sound-card-icon">{{ som.icon }}</span>
-                      <div class="sound-card-info">
-                        <strong class="sound-card-label">{{ som.label }}</strong>
-                        <span class="sound-card-desc">{{ som.desc }}</span>
+                  <!-- TELA DO VÍDEO COM PLACEHOLDER LIMPO (BRANCO E CINZA) -->
+                  <div class="video-screen-viewport">
+                    <div class="clean-video-placeholder">
+                      <div class="clean-placeholder-circle">
+                        <svg class="clean-placeholder-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+                          <path d="M23 7l-7 5 7 5V7z" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
                       </div>
-                      <span class="sound-fire-pill">Tocar no VR</span>
-                    </button>
+
+                      <strong class="clean-placeholder-title">Vídeo não encontrado</strong>
+                      <span class="clean-placeholder-sub">Nenhuma transmissão detectada no momento</span>
+                    </div>
                   </div>
+
+                  <!-- BARRA INFERIOR DE CONTROLES: VOLUME E TELA CHEIA -->
+                  <div class="video-player-bottombar">
+                    <!-- CONTROLE DE VOLUME -->
+                    <div class="player-volume-wrap">
+                      <button 
+                        type="button" 
+                        class="player-ctrl-btn mini"
+                        @click="videoMutado = !videoMutado"
+                        :title="videoMutado ? 'Desmutar som' : 'Mutar som'"
+                      >
+                        <span>{{ videoMutado ? '🔇' : '🔊' }}</span>
+                      </button>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        v-model="volumeVideo" 
+                        class="player-volume-slider" 
+                        :disabled="videoMutado"
+                        title="Ajustar volume"
+                      />
+                      <span class="player-volume-label">{{ videoMutado ? '0%' : volumeVideo + '%' }}</span>
+                    </div>
+
+                    <!-- BOTÃO TELA CHEIA -->
+                    <div class="player-actions-wrap">
+                      <button 
+                        type="button" 
+                        class="player-ctrl-btn"
+                        @click="toggleFullscreenVideo"
+                        :title="videoEmTelaCheia ? 'Sair da tela cheia' : 'Tela cheia'"
+                      >
+                        <span class="btn-ctrl-icon">{{ videoEmTelaCheia ? '⏹️' : '⛶' }}</span>
+                        <span>{{ videoEmTelaCheia ? 'Sair' : 'Tela Cheia' }}</span>
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
-              </Transition>
+              </div>
 
             </div>
 
@@ -679,6 +796,46 @@ const SONS_VR = [
     desc: 'Sinal sonoro escolar de início/troca de aula no headset VR'
   }
 ]
+
+// ==========================================
+// MÓDULO: PLAYER DE VÍDEO VR (BRANCO E CINZA)
+// ==========================================
+const videoContainerRef = ref(null)
+const volumeVideo = ref(80)
+const videoMutado = ref(false)
+const videoEmTelaCheia = ref(false)
+
+const abrirNovaAbaTransmissao = () => {
+  const routeData = router.resolve({
+    name: 'transmissao-sala',
+    params: { id: salaId.value }
+  })
+  window.open(routeData.href, '_blank')
+}
+
+const toggleFullscreenVideo = () => {
+  if (!videoContainerRef.value) return
+  if (!document.fullscreenElement) {
+    if (videoContainerRef.value.requestFullscreen) {
+      videoContainerRef.value.requestFullscreen().then(() => {
+        videoEmTelaCheia.value = true
+      }).catch(err => {
+        console.warn('Fullscreen não suportado ou negado:', err)
+      })
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().then(() => {
+        videoEmTelaCheia.value = false
+      })
+    }
+  }
+}
+
+const handleFullscreenChange = () => {
+  videoEmTelaCheia.value = !!document.fullscreenElement
+}
+
 
 // ==========================================
 // CONTROLE DE PERMISSÕES & FACILITADOR PLUS
@@ -1620,6 +1777,7 @@ const executarExclusaoSala = async () => {
 
 onMounted(async () => {
   document.addEventListener('click', handleClickForaOculos)
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
 
   try {
     const profile = await authStore.getUserProfile()
@@ -1638,6 +1796,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickForaOculos)
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
   limparListeners()
 })
 </script>
@@ -2026,7 +2185,19 @@ onUnmounted(() => {
 }
 
 /* ==========================================
-   CONTAINER: CENÁRIOS E GAVETA DE SONS
+   CONTAINER SPLIT: CENÁRIOS/SONS (ESQ) & PLAYER VÍDEO (MEIO)
+   ========================================== */
+.console-main-content-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ==========================================
+   SUB-COLUNA 1: CENÁRIOS E GAVETA DE SONS
    ========================================== */
 .scenarios-and-sounds-wrapper {
   flex: 1;
@@ -2035,6 +2206,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 14px;
+  padding: 8px 10px;
+  gap: 6px;
 }
 
 /* SEÇÃO 2: CENÁRIOS */
@@ -2045,41 +2221,63 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   overflow: hidden;
-  padding-bottom: 6px;
 }
 
-.scenarios-header-row {
+.scenarios-pane-header {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.scenarios-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
-  gap: 8px;
 }
 
 .scenarios-title-wrap {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
 }
 
 .scenarios-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.2px;
 }
 
-.scenarios-subtitle {
-  font-size: 0.7rem;
+.scenarios-counter-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0071e3;
+  background: #eff6ff;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid #bfdbfe;
+}
+
+.scenarios-quick-hint {
+  font-size: 0.68rem;
   color: #64748b;
   font-weight: 500;
 }
 
-.scenarios-filter-pills {
+.scenarios-filter-scroll {
   display: flex;
   align-items: center;
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+
+.scenarios-filter-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .filter-pill-btn {
@@ -2095,6 +2293,8 @@ onUnmounted(() => {
   color: #475569;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .filter-pill-btn:hover {
@@ -2108,52 +2308,66 @@ onUnmounted(() => {
   color: #ffffff;
 }
 
-/* GRADE DE CENÁRIOS (COMPACTO, CABE SEM SCROLL NA TELA) */
-.scenarios-grid {
+/* LISTA COMPACTA DE CENÁRIOS */
+.scenarios-compact-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-  gap: 8px;
+  overflow-x: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   padding: 2px 2px 4px 2px;
   scrollbar-width: thin;
 }
 
-.scenario-glass-card {
-  border: 1.5px solid #fecaca;
-  border-radius: 11px;
+.scenario-compact-card {
+  border: 1.5px solid #fed7aa;
+  border-radius: 9px;
   background: #ffffff;
-  padding: 7px 10px;
+  padding: 4px 8px;
+  min-height: 38px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: space-between;
-  min-height: 72px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.04);
+  gap: 6px;
   position: relative;
+  overflow: visible;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
 }
 
-.scenario-glass-card:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: #f87171;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.14);
-  background: #fffafa;
+.scenario-compact-card:hover {
+  transform: translateY(-1px);
+  border-color: #f97316;
+  box-shadow: 0 3px 8px rgba(249, 115, 22, 0.14);
 }
 
-.scenario-glass-card:active:not(:disabled) {
-  transform: scale(0.98);
+.scenario-compact-card.is-tea-exclusive {
+  border-color: #c7d2fe;
 }
 
-.scenario-glass-card.is-firing {
+.scenario-compact-card.is-tea-exclusive:hover {
+  border-color: #6366f1;
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.15);
+}
+
+.scenario-compact-card.is-tdah-exclusive {
+  border-color: #fde68a;
+}
+
+.scenario-compact-card.is-tdah-exclusive:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.15);
+}
+
+.scenario-compact-card.is-firing {
   border-color: #10b981;
   background: #ecfdf5;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
 }
 
-.scenario-glass-card:disabled {
+.scenario-compact-card.is-locked {
   opacity: 0.45;
   cursor: not-allowed;
   border-color: #cbd5e1;
@@ -2162,65 +2376,445 @@ onUnmounted(() => {
   filter: grayscale(25%);
 }
 
-.scenario-card-header {
+.scenario-btn-action {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 2px;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
 }
 
-.scenario-icon-box {
-  font-size: 1.1rem;
+.scenario-btn-action:disabled {
+  cursor: not-allowed;
 }
 
-.scenario-cond-badge {
-  font-size: 0.6rem;
+.scenario-btn-icon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.scenario-btn-label {
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.scenario-btn-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.scenario-cond-pill {
+  font-size: 0.58rem;
   font-weight: 800;
   padding: 1px 5px;
-  border-radius: 5px;
+  border-radius: 4px;
   text-transform: uppercase;
 }
 
-.scenario-cond-badge.tea {
+.scenario-cond-pill.tea {
   background: #e0e7ff;
   color: #4338ca;
 }
 
-.scenario-cond-badge.tdah {
+.scenario-cond-pill.tdah {
   background: #fef3c7;
   color: #b45309;
 }
 
-.scenario-card-title {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.2;
+/* INTERROGAÇÃO (?) COM TOOLTIP FLUTUANTE */
+.scenario-help-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.scenario-card-desc {
-  font-size: 0.68rem;
+.scenario-help-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.scenario-help-wrapper:hover .scenario-help-icon {
+  background: #0071e3;
+  color: #ffffff;
+  border-color: #0071e3;
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.3);
+}
+
+.scenario-desc-tooltip {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  width: 230px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  color: #ffffff;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+  z-index: 100;
+  text-align: left;
+}
+
+.scenario-help-wrapper:hover .scenario-desc-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Ajuste de posição para itens superiores e inferiores não cliparem */
+.scenario-compact-card:first-child .scenario-desc-tooltip,
+.scenario-compact-card:nth-child(2) .scenario-desc-tooltip {
+  top: 0;
+  transform: translateY(0) translateX(4px);
+}
+
+.scenario-compact-card:first-child .scenario-help-wrapper:hover .scenario-desc-tooltip,
+.scenario-compact-card:nth-child(2) .scenario-help-wrapper:hover .scenario-desc-tooltip {
+  transform: translateY(0) translateX(0);
+}
+
+.scenario-compact-card:first-child .tooltip-arrow,
+.scenario-compact-card:nth-child(2) .tooltip-arrow {
+  top: 10px;
+}
+
+.scenario-compact-card:last-child .scenario-desc-tooltip,
+.scenario-compact-card:nth-last-child(2) .scenario-desc-tooltip {
+  top: auto;
+  bottom: 0;
+  transform: translateY(0) translateX(4px);
+}
+
+.scenario-compact-card:last-child .scenario-help-wrapper:hover .scenario-desc-tooltip,
+.scenario-compact-card:nth-last-child(2) .scenario-help-wrapper:hover .scenario-desc-tooltip {
+  transform: translateY(0) translateX(0);
+}
+
+.scenario-compact-card:last-child .tooltip-arrow,
+.scenario-compact-card:nth-last-child(2) .tooltip-arrow {
+  top: auto;
+  bottom: 10px;
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.tooltip-icon {
+  font-size: 0.95rem;
+}
+
+.tooltip-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.tooltip-chip {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.tooltip-chip.tea {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
+.tooltip-chip.tdah {
+  background: #78350f;
+  color: #fde68a;
+}
+
+.tooltip-text {
+  font-size: 0.71rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: rgba(15, 23, 42, 0.96);
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* ==========================================
+   SUB-COLUNA 2: PLAYER DE VÍDEO (BRANCO E CINZA)
+   ========================================== */
+.console-video-column {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-player-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  position: relative;
+}
+
+/* BARRA SUPERIOR DO PLAYER (BRANCO E CINZA) */
+.video-player-topbar {
+  height: 40px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.video-topbar-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.video-topbar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.video-topbar-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.video-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-player-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-player-action:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.action-icon {
+  font-size: 0.8rem;
   color: #64748b;
-  line-height: 1.2;
-  margin: 2px 0 4px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+}
+
+/* TELA DO VÍDEO (VIEWPORT CLEAN BRANCO E CINZA) */
+.video-screen-viewport {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
-.scenario-card-footer {
+/* PLACEHOLDER LIMPO (BRANCO E CINZA) */
+.clean-video-placeholder {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  max-width: 380px;
 }
 
-.instant-trigger-badge {
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: #e11d48;
-  letter-spacing: 0.2px;
+.clean-placeholder-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
+
+.clean-placeholder-svg {
+  width: 26px;
+  height: 26px;
+  color: #94a3b8;
+}
+
+.clean-placeholder-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.2px;
+}
+
+.clean-placeholder-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* BARRA INFERIOR DE CONTROLES DO PLAYER (BRANCO E CINZA) */
+.video-player-bottombar {
+  height: 42px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.player-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-volume-slider {
+  width: 75px;
+  height: 4px;
+  accent-color: #475569;
+  cursor: pointer;
+}
+
+.player-volume-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 28px;
+}
+
+.player-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.player-ctrl-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.player-ctrl-btn.mini {
+  padding: 3px 6px;
+  font-size: 0.85rem;
+  background: transparent;
+  border-color: transparent;
+}
+
+.player-ctrl-btn.mini:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.btn-ctrl-icon {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+
 
 /* ==========================================
    SEÇÃO 3: SONS DA SALA (DOCK BAR & EXPANDABLE DRAWER)
@@ -2266,6 +2860,22 @@ onUnmounted(() => {
   color: #92400e;
 }
 
+.sounds-dock-text-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sounds-dock-count-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #b45309;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #fde68a;
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+
 .sounds-dock-tech {
   font-size: 0.62rem;
   font-weight: 800;
@@ -2281,6 +2891,7 @@ onUnmounted(() => {
   font-weight: 700;
   color: #b45309;
 }
+
 
 .sounds-dock-center {
   font-size: 0.7rem;
@@ -3159,5 +3770,21 @@ onUnmounted(() => {
 .glass-modal-enter-from, .glass-modal-leave-to {
   opacity: 0;
   transform: scale(0.96) translateY(12px);
+}
+
+@media (max-width: 1200px) {
+  .console-main-content-split {
+    grid-template-columns: minmax(290px, 340px) 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .console-main-content-split {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .console-video-column {
+    min-height: 280px;
+  }
 }
 </style>

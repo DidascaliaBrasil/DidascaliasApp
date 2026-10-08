@@ -73,6 +73,12 @@ const router = createRouter({
       name: 'configurar-sala',
       component: () => import('../views/ConfigurarSalaView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/transmissao-sala/:id',
+      name: 'transmissao-sala',
+      component: () => import('../views/TransmissaoSalaView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
