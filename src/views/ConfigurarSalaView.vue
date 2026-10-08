@@ -249,7 +249,6 @@
                         <div class="scenario-help-wrapper" @click.stop.prevent>
                           <span 
                             class="scenario-help-icon" 
-                            :title="`${acao.label}: ${acao.desc}`"
                             aria-label="Descrição do conflito"
                           >?</span>
 
@@ -2332,12 +2331,16 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 6px;
   position: relative;
+  z-index: 1;
   overflow: visible;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
 }
 
-.scenario-compact-card:hover {
+.scenario-compact-card:hover,
+.scenario-compact-card:has(.scenario-help-wrapper:hover),
+.scenario-compact-card:focus-within {
+  z-index: 100 !important;
   transform: translateY(-1px);
   border-color: #f97316;
   box-shadow: 0 3px 8px rgba(249, 115, 22, 0.14);
@@ -2347,7 +2350,8 @@ onUnmounted(() => {
   border-color: #c7d2fe;
 }
 
-.scenario-compact-card.is-tea-exclusive:hover {
+.scenario-compact-card.is-tea-exclusive:hover,
+.scenario-compact-card.is-tea-exclusive:has(.scenario-help-wrapper:hover) {
   border-color: #6366f1;
   box-shadow: 0 3px 8px rgba(99, 102, 241, 0.15);
 }
@@ -2356,7 +2360,8 @@ onUnmounted(() => {
   border-color: #fde68a;
 }
 
-.scenario-compact-card.is-tdah-exclusive:hover {
+.scenario-compact-card.is-tdah-exclusive:hover,
+.scenario-compact-card.is-tdah-exclusive:has(.scenario-help-wrapper:hover) {
   border-color: #f59e0b;
   box-shadow: 0 3px 8px rgba(245, 158, 11, 0.15);
 }
@@ -2368,12 +2373,37 @@ onUnmounted(() => {
 }
 
 .scenario-compact-card.is-locked {
-  opacity: 0.45;
   cursor: not-allowed;
-  border-color: #cbd5e1;
+  border-color: #e2e8f0;
+  background: #f8fafc;
   box-shadow: none;
   transform: none;
-  filter: grayscale(25%);
+}
+
+.scenario-compact-card.is-locked:hover,
+.scenario-compact-card.is-locked:has(.scenario-help-wrapper:hover) {
+  transform: none;
+  border-color: #cbd5e1;
+  box-shadow: none;
+  z-index: 100 !important;
+}
+
+.scenario-compact-card.is-locked .scenario-btn-action {
+  opacity: 0.45;
+  filter: grayscale(35%);
+  cursor: not-allowed;
+}
+
+.scenario-compact-card.is-locked .scenario-cond-pill {
+  opacity: 0.6;
+}
+
+.scenario-compact-card.is-locked .scenario-help-icon {
+  opacity: 0.7;
+}
+
+.scenario-compact-card.is-locked .scenario-help-wrapper:hover .scenario-help-icon {
+  opacity: 1;
 }
 
 .scenario-btn-action {
@@ -2440,6 +2470,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .scenario-help-icon {
@@ -2459,6 +2490,10 @@ onUnmounted(() => {
   user-select: none;
 }
 
+.scenario-help-wrapper:hover {
+  z-index: 100;
+}
+
 .scenario-help-wrapper:hover .scenario-help-icon {
   background: #0071e3;
   color: #ffffff;
@@ -2472,20 +2507,18 @@ onUnmounted(() => {
   right: calc(100% + 8px);
   top: 50%;
   transform: translateY(-50%) translateX(4px);
-  width: 230px;
-  background: rgba(15, 23, 42, 0.96);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  width: 235px;
+  background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 9px;
   padding: 8px 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
   color: #ffffff;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-  z-index: 100;
+  z-index: 999;
   text-align: left;
 }
 
@@ -2497,36 +2530,30 @@ onUnmounted(() => {
 }
 
 /* Ajuste de posição para itens superiores e inferiores não cliparem */
-.scenario-compact-card:first-child .scenario-desc-tooltip,
-.scenario-compact-card:nth-child(2) .scenario-desc-tooltip {
-  top: 0;
+.scenario-compact-card:first-child .scenario-desc-tooltip {
+  top: -2px;
   transform: translateY(0) translateX(4px);
 }
 
-.scenario-compact-card:first-child .scenario-help-wrapper:hover .scenario-desc-tooltip,
-.scenario-compact-card:nth-child(2) .scenario-help-wrapper:hover .scenario-desc-tooltip {
+.scenario-compact-card:first-child .scenario-help-wrapper:hover .scenario-desc-tooltip {
   transform: translateY(0) translateX(0);
 }
 
-.scenario-compact-card:first-child .tooltip-arrow,
-.scenario-compact-card:nth-child(2) .tooltip-arrow {
+.scenario-compact-card:first-child .tooltip-arrow {
   top: 10px;
 }
 
-.scenario-compact-card:last-child .scenario-desc-tooltip,
-.scenario-compact-card:nth-last-child(2) .scenario-desc-tooltip {
+.scenario-compact-card:last-child .scenario-desc-tooltip {
   top: auto;
-  bottom: 0;
+  bottom: -2px;
   transform: translateY(0) translateX(4px);
 }
 
-.scenario-compact-card:last-child .scenario-help-wrapper:hover .scenario-desc-tooltip,
-.scenario-compact-card:nth-last-child(2) .scenario-help-wrapper:hover .scenario-desc-tooltip {
+.scenario-compact-card:last-child .scenario-help-wrapper:hover .scenario-desc-tooltip {
   transform: translateY(0) translateX(0);
 }
 
-.scenario-compact-card:last-child .tooltip-arrow,
-.scenario-compact-card:nth-last-child(2) .tooltip-arrow {
+.scenario-compact-card:last-child .tooltip-arrow {
   top: auto;
   bottom: 10px;
 }
@@ -2580,7 +2607,7 @@ onUnmounted(() => {
   transform: translateY(-50%) rotate(45deg);
   width: 10px;
   height: 10px;
-  background: rgba(15, 23, 42, 0.96);
+  background: #0f172a;
   border-right: 1px solid rgba(255, 255, 255, 0.18);
   border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
