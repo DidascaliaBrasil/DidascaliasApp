@@ -169,6 +169,30 @@
               />
             </div>
 
+            <!-- Seção de Streaming VR (Estratégia B: PIN de 4 Dígitos Fixo e Permanente) -->
+            <div class="vr-pin-config-card">
+              <div class="vr-pin-header">
+                <div class="pin-title-group">
+                  <span class="pin-strategy-badge">ESTRATÉGIA B</span>
+                  <h4 class="pin-section-title">PIN de Transmissão ao Vivo (Fixo)</h4>
+                </div>
+                <span class="pin-fixed-badge">🔒 Permanente</span>
+              </div>
+
+              <p class="pin-section-desc">
+                Código permanente de 4 dígitos gerado automaticamente para emparelhamento direto do óculos VR ao navegador (compatível com HIMU e servidor cyclops-dev.uab.cat).
+              </p>
+
+              <div class="pin-input-action-bar">
+                <div class="pin-display-wrapper static-wrapper">
+                  <span class="pin-label-tag">PIN VR</span>
+                  <span class="static-pin-number">{{ form.pinStreaming }}</span>
+                </div>
+                <span class="pin-note">✓ Fixo e exclusivo da sala (só deixa de existir caso a sala seja excluída).</span>
+              </div>
+            </div>
+
+
             <div class="grid-form-fields">
               <div class="input-group-glass">
                 <label class="input-label-glass">
@@ -650,10 +674,15 @@ const modelosPadrao = [
   }
 ]
 
+const gerarPinStreaming = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString()
+}
+
 const form = reactive({
   targetType: 'grupo',
   targetId: '',
   roomName: '',
+  pinStreaming: '',
   numBoys: 0,
   numGirls: 0,
   numDesks: 0,
@@ -689,6 +718,7 @@ const getShapeLabel = (s) => {
 }
 
 onMounted(async () => {
+  form.pinStreaming = gerarPinStreaming()
   try {
     const profile = await authStore.getUserProfile()
     if (profile && profile.tipo !== 'indefinido') {
@@ -969,6 +999,12 @@ const salvarConfiguracao = async () => {
     const configsRef = dbRef(database, 'classroom_configs')
     const novaConfigRef = push(configsRef)
 
+    let pinFinal = String(form.pinStreaming || '').trim()
+    if (!/^\d{4}$/.test(pinFinal)) {
+      pinFinal = gerarPinStreaming()
+      form.pinStreaming = pinFinal
+    }
+
     const payload = {
       roomName: form.roomName,
       targetType: form.targetType,
@@ -979,6 +1015,7 @@ const salvarConfiguracao = async () => {
       situacao_atual: {
         ativo: "nao"
       },
+      pinStreaming: pinFinal,
       
       numBoys: Number(form.numBoys || 0),
       numGirls: Number(form.numGirls || 0),
@@ -994,7 +1031,7 @@ const salvarConfiguracao = async () => {
 
     await set(novaConfigRef, payload)
     
-    exibirAlerta('success', 'Sala VR configurada e criada com sucesso! Redirecionando...', 'Sala Criada!')
+    exibirAlerta('success', `Sala VR criada com sucesso! PIN de Streaming VR: ${pinFinal}. Redirecionando...`, 'Sala Criada!')
     
     form.roomName = ''
     form.targetId = ''
@@ -2138,6 +2175,109 @@ const salvarConfiguracao = async () => {
   color: #991b1b;
 }
 
+/* CARD DE CONFIGURAÇÃO DE PIN STREAMING (ESTRATÉGIA B) */
+.vr-pin-config-card {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(240, 253, 250, 0.85) 100%);
+  border: 1.5px solid rgba(191, 219, 254, 0.9);
+  border-radius: 18px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.05);
+}
+
+.vr-pin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.pin-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pin-strategy-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.pin-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pin-fixed-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e40af;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.pin-section-desc {
+  font-size: 0.82rem;
+  color: #475569;
+  margin: 0 0 14px 0;
+  line-height: 1.4;
+}
+
+.pin-input-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pin-display-wrapper {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 3px 8px 3px 12px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.static-wrapper {
+  background: #f8fafc;
+  border-color: #2563eb;
+  padding: 6px 16px;
+}
+
+.pin-label-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #2563eb;
+  margin-right: 10px;
+}
+
+.static-pin-number {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.2em;
+  font-family: monospace;
+}
+
+.pin-note {
+  font-size: 0.8rem;
+  color: #059669;
+  font-weight: 500;
+}
+
 @media (max-width: 680px) {
   .target-type-selector { grid-template-columns: 1fr; }
   .grid-form-fields { grid-template-columns: 1fr; }
@@ -2149,5 +2289,6 @@ const salvarConfiguracao = async () => {
   .btn-quick-model { flex: 1; justify-content: center; }
   .models-grid { grid-template-columns: 1fr; }
   .preview-grid { grid-template-columns: 1fr; }
+  .vr-pin-header { flex-direction: column; align-items: flex-start; }
 }
 </style>

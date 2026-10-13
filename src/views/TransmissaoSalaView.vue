@@ -16,6 +16,9 @@
         <div class="room-info-badge">
           <span class="room-icon">🥽</span>
           <strong class="room-title">{{ sala?.roomName || 'Transmissão da Sala Virtual' }}</strong>
+          <span v-if="sala?.pinStreaming" class="header-pin-pill" :title="'PIN para óculos VR: ' + sala.pinStreaming">
+            PIN VR: <strong>{{ sala.pinStreaming }}</strong>
+          </span>
         </div>
 
         <span class="transmission-status-tag">
@@ -34,16 +37,26 @@
         
         <!-- TELA DO VÍDEO COM PLACEHOLDER LIMPO (BRANCO E CINZA) -->
         <div class="transmissao-screen">
-          <div class="clean-placeholder-box">
+          <video 
+            ref="videoElementRef"
+            autoplay
+            playsinline
+            :muted="videoMutado"
+            class="clean-live-video"
+            v-show="isLive"
+          ></video>
+
+          <div v-show="!isLive" class="clean-placeholder-box">
             <div class="clean-placeholder-circle">
-              <svg class="clean-placeholder-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <div v-if="isConnecting" class="clean-spinner-subtle"></div>
+              <svg v-else class="clean-placeholder-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
                 <path d="M23 7l-7 5 7 5V7z" />
                 <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
             </div>
-            <h2 class="clean-placeholder-title">Vídeo não encontrado</h2>
-            <p class="clean-placeholder-sub">Nenhuma transmissão detectada no momento</p>
+            <h2 class="clean-placeholder-title">{{ statusTitle }}</h2>
+            <p class="clean-placeholder-sub">{{ statusMessage }}</p>
           </div>
         </div>
 
@@ -54,7 +67,7 @@
             <button 
               type="button" 
               class="player-ctrl-btn mini"
-              @click="videoMutado = !videoMutado"
+              @click="toggleMutarVideo"
               :title="videoMutado ? 'Desmutar som' : 'Mutar som'"
             >
               <span>{{ videoMutado ? '🔇' : '🔊' }}</span>
@@ -64,6 +77,7 @@
               min="0" 
               max="100" 
               v-model="volumeVideo" 
+              @input="ajustarVolumeVideo"
               class="player-volume-slider" 
               :disabled="videoMutado"
               title="Ajustar volume"
@@ -91,10 +105,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { database } from '../firebase'
-import { ref as dbRef, get } from 'firebase/database'
+import { ref as dbRef, get, update } from 'firebase/database'
+import { useVRStream } from '../composables/useVRStream'
 
 const route = useRoute()
 const router = useRouter()
@@ -102,9 +117,31 @@ const salaId = ref(route.params.id)
 const sala = ref(null)
 
 const transmissaoContainerRef = ref(null)
+const videoElementRef = ref(null)
 const volumeVideo = ref(80)
-const videoMutado = ref(false)
+const videoMutado = ref(true)
 const isTelaCheia = ref(false)
+
+const pinStreamingSala = computed(() => sala.value?.pinStreaming || '')
+const { isLive, isConnecting, statusTitle, statusMessage } = useVRStream(pinStreamingSala, videoElementRef)
+
+const toggleMutarVideo = () => {
+  videoMutado.value = !videoMutado.value
+  if (videoElementRef.value) {
+    videoElementRef.value.muted = videoMutado.value
+    if (!videoMutado.value) {
+      videoElementRef.value.volume = volumeVideo.value / 100
+    }
+  }
+}
+
+const ajustarVolumeVideo = () => {
+  if (videoElementRef.value) {
+    if (videoMutado.value) videoMutado.value = false
+    videoElementRef.value.muted = false
+    videoElementRef.value.volume = volumeVideo.value / 100
+  }
+}
 
 const carregarSala = async () => {
   if (!salaId.value) return
@@ -112,6 +149,15 @@ const carregarSala = async () => {
     const snap = await get(dbRef(database, `classroom_configs/${salaId.value}`))
     if (snap.exists()) {
       sala.value = snap.val()
+      if (!sala.value.pinStreaming || !/^\d{4}$/.test(String(sala.value.pinStreaming).trim())) {
+        const pinAuto = Math.floor(1000 + Math.random() * 9000).toString()
+        try {
+          await update(dbRef(database, `classroom_configs/${salaId.value}`), { pinStreaming: pinAuto })
+          sala.value.pinStreaming = pinAuto
+        } catch (e) {
+          sala.value.pinStreaming = pinAuto
+        }
+      }
     }
   } catch (err) {
     console.error('Erro ao carregar dados da sala:', err)
@@ -236,6 +282,26 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
+.header-pin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.header-pin-pill strong {
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+}
+
 .transmission-status-tag {
   display: inline-flex;
   align-items: center;
@@ -295,6 +361,27 @@ onUnmounted(() => {
   margin: 10px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+}
+
+.clean-live-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #0f172a;
+  display: block;
+}
+
+.clean-spinner-subtle {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: cleanSpin 0.8s linear infinite;
+}
+
+@keyframes cleanSpin {
+  to { transform: rotate(360deg); }
 }
 
 /* PLACEHOLDER BRANCO E CINZA */

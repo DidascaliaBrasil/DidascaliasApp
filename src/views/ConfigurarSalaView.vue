@@ -350,11 +350,14 @@
               <div class="console-video-column" ref="videoContainerRef">
                 <div class="video-player-card">
                   
-                  <!-- BARRA SUPERIOR LIMPA (BRANCO E CINZA) -->
+                  <!-- BARRA SUPERIOR LIMPA COM PIN VR EM DESTAQUE -->
                   <div class="video-player-topbar">
                     <div class="video-topbar-title-wrap">
                       <span class="video-topbar-dot"></span>
                       <span class="video-topbar-title">Transmissão da Sala</span>
+                      <span v-if="sala?.pinStreaming" class="video-pin-pill" :title="'PIN de pareamento VR (Estratégia B): ' + sala.pinStreaming">
+                        PIN VR: <strong>{{ sala.pinStreaming }}</strong>
+                      </span>
                     </div>
 
                     <div class="video-topbar-actions">
@@ -370,30 +373,40 @@
                     </div>
                   </div>
 
-                  <!-- TELA DO VÍDEO COM PLACEHOLDER LIMPO (BRANCO E CINZA) -->
+                  <!-- TELA DO VÍDEO (VIEWPORT CLEAN BRANCO E CINZA) -->
                   <div class="video-screen-viewport">
-                    <div class="clean-video-placeholder">
+                    <video 
+                      ref="videoElementRef"
+                      autoplay
+                      playsinline
+                      :muted="videoMutado"
+                      class="clean-live-video"
+                      v-show="isLive"
+                    ></video>
+
+                    <div v-show="!isLive" class="clean-video-placeholder">
                       <div class="clean-placeholder-circle">
-                        <svg class="clean-placeholder-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <div v-if="isConnecting" class="clean-spinner-subtle"></div>
+                        <svg v-else class="clean-placeholder-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
                           <path d="M23 7l-7 5 7 5V7z" />
                           <line x1="1" y1="1" x2="23" y2="23" />
                         </svg>
                       </div>
 
-                      <strong class="clean-placeholder-title">Vídeo não encontrado</strong>
-                      <span class="clean-placeholder-sub">Nenhuma transmissão detectada no momento</span>
+                      <strong class="clean-placeholder-title">{{ statusTitle }}</strong>
+                      <span class="clean-placeholder-sub">{{ statusMessage }}</span>
                     </div>
                   </div>
 
-                  <!-- BARRA INFERIOR DE CONTROLES: VOLUME E TELA CHEIA -->
+                  <!-- BARRA INFERIOR DE CONTROLES: VOLUME E TELA CHEIA (BRANCO E CINZA) -->
                   <div class="video-player-bottombar">
                     <!-- CONTROLE DE VOLUME -->
                     <div class="player-volume-wrap">
                       <button 
                         type="button" 
                         class="player-ctrl-btn mini"
-                        @click="videoMutado = !videoMutado"
+                        @click="toggleMutarVideo"
                         :title="videoMutado ? 'Desmutar som' : 'Mutar som'"
                       >
                         <span>{{ videoMutado ? '🔇' : '🔊' }}</span>
@@ -403,6 +416,7 @@
                         min="0" 
                         max="100" 
                         v-model="volumeVideo" 
+                        @input="ajustarVolumeVideo"
                         class="player-volume-slider" 
                         :disabled="videoMutado"
                         title="Ajustar volume"
@@ -721,6 +735,7 @@ import { useAuthStore } from '../stores/auth'
 import { isSalaAtiva } from '../utils/salaUtils'
 import { parseAlunosVR } from '../utils/alunosVRUtils'
 import MenuLateral from '../components/generic/MenuLateral.vue'
+import { useVRStream } from '../composables/useVRStream'
 
 const router = useRouter()
 const route = useRoute()
@@ -800,9 +815,31 @@ const SONS_VR = [
 // MÓDULO: PLAYER DE VÍDEO VR (BRANCO E CINZA)
 // ==========================================
 const videoContainerRef = ref(null)
+const videoElementRef = ref(null)
 const volumeVideo = ref(80)
-const videoMutado = ref(false)
+const videoMutado = ref(true)
 const videoEmTelaCheia = ref(false)
+
+const pinStreamingSala = computed(() => sala.value?.pinStreaming || '')
+const { isLive, isConnecting, statusTitle, statusMessage } = useVRStream(pinStreamingSala, videoElementRef)
+
+const toggleMutarVideo = () => {
+  videoMutado.value = !videoMutado.value
+  if (videoElementRef.value) {
+    videoElementRef.value.muted = videoMutado.value
+    if (!videoMutado.value) {
+      videoElementRef.value.volume = volumeVideo.value / 100
+    }
+  }
+}
+
+const ajustarVolumeVideo = () => {
+  if (videoElementRef.value) {
+    if (videoMutado.value) videoMutado.value = false
+    videoElementRef.value.muted = false
+    videoElementRef.value.volume = volumeVideo.value / 100
+  }
+}
 
 const abrirNovaAbaTransmissao = () => {
   const routeData = router.resolve({
@@ -1608,6 +1645,18 @@ const carregarDadosSala = async () => {
     if (snap.exists()) {
       const data = snap.val()
       sala.value = { id: sId, ...data }
+
+      // Se a sala não possuir pinStreaming de 4 dígitos, gera e persiste automaticamente (Estratégia B)
+      if (!data.pinStreaming || !/^\d{4}$/.test(String(data.pinStreaming).trim())) {
+        const pinAuto = Math.floor(1000 + Math.random() * 9000).toString()
+        try {
+          await update(dbRef(database, `classroom_configs/${sId}`), { pinStreaming: pinAuto })
+          sala.value.pinStreaming = pinAuto
+        } catch (errPin) {
+          console.warn("Aviso ao salvar PIN automático da sala:", errPin)
+          sala.value.pinStreaming = pinAuto
+        }
+      }
 
       selectedActiveOculos.value = data.activeHeadsetId || null
       selectedActiveParticipant.value = data.activeParticipantId || null
@@ -2704,6 +2753,26 @@ onUnmounted(() => {
   color: #64748b;
 }
 
+.video-pin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #1d4ed8;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.video-pin-pill strong {
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+}
+
 /* TELA DO VÍDEO (VIEWPORT CLEAN BRANCO E CINZA) */
 .video-screen-viewport {
   flex: 1;
@@ -2717,6 +2786,46 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.clean-live-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #0f172a;
+  display: block;
+}
+
+.clean-spinner-subtle {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: cleanSpin 0.8s linear infinite;
+}
+
+@keyframes cleanSpin {
+  to { transform: rotate(360deg); }
+}
+
+.video-topbar-dot.live-dot {
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+
+.video-topbar-dot.connecting-dot {
+  background: #f59e0b;
+}
+
+.status-live-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  background: #22c55e;
+  color: #ffffff;
+  border-radius: 4px;
 }
 
 /* PLACEHOLDER LIMPO (BRANCO E CINZA) */
